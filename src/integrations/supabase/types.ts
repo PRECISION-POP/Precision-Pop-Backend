@@ -115,11 +115,15 @@ export type Database = {
           brand_id: string
           budget_spent: number | null
           budget_total: number
+          clicks_delivered: number | null
+          conversions_delivered: number | null
           created_at: string
           creative_url: string | null
+          daily_budget_cap: number | null
           discount_value: number | null
           end_date: string
           id: string
+          impressions_delivered: number | null
           name: string
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"] | null
@@ -132,11 +136,15 @@ export type Database = {
           brand_id: string
           budget_spent?: number | null
           budget_total: number
+          clicks_delivered?: number | null
+          conversions_delivered?: number | null
           created_at?: string
           creative_url?: string | null
+          daily_budget_cap?: number | null
           discount_value?: number | null
           end_date: string
           id?: string
+          impressions_delivered?: number | null
           name: string
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"] | null
@@ -149,11 +157,15 @@ export type Database = {
           brand_id?: string
           budget_spent?: number | null
           budget_total?: number
+          clicks_delivered?: number | null
+          conversions_delivered?: number | null
           created_at?: string
           creative_url?: string | null
+          daily_budget_cap?: number | null
           discount_value?: number | null
           end_date?: string
           id?: string
+          impressions_delivered?: number | null
           name?: string
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"] | null
@@ -294,6 +306,7 @@ export type Database = {
       }
       flash_promos: {
         Row: {
+          accept_count: number | null
           auto_disable_at_zero: boolean | null
           category: string | null
           created_at: string
@@ -303,11 +316,15 @@ export type Database = {
           discounted_price: number | null
           end_time: string
           id: string
+          image_url: string | null
+          impressions_count: number | null
           metrics: Json | null
           priority: Database["public"]["Enums"]["promo_priority"] | null
           product_name: string
+          redemption_count: number | null
           regular_price: number | null
           retailer_id: string
+          revenue_impact: number | null
           show_to_all: boolean | null
           sku: string
           start_time: string | null
@@ -317,8 +334,10 @@ export type Database = {
           target_segments: string[] | null
           type: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
+          accept_count?: number | null
           auto_disable_at_zero?: boolean | null
           category?: string | null
           created_at?: string
@@ -328,11 +347,15 @@ export type Database = {
           discounted_price?: number | null
           end_time: string
           id?: string
+          image_url?: string | null
+          impressions_count?: number | null
           metrics?: Json | null
           priority?: Database["public"]["Enums"]["promo_priority"] | null
           product_name: string
+          redemption_count?: number | null
           regular_price?: number | null
           retailer_id: string
+          revenue_impact?: number | null
           show_to_all?: boolean | null
           sku: string
           start_time?: string | null
@@ -342,8 +365,10 @@ export type Database = {
           target_segments?: string[] | null
           type?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
+          accept_count?: number | null
           auto_disable_at_zero?: boolean | null
           category?: string | null
           created_at?: string
@@ -353,11 +378,15 @@ export type Database = {
           discounted_price?: number | null
           end_time?: string
           id?: string
+          image_url?: string | null
+          impressions_count?: number | null
           metrics?: Json | null
           priority?: Database["public"]["Enums"]["promo_priority"] | null
           product_name?: string
+          redemption_count?: number | null
           regular_price?: number | null
           retailer_id?: string
+          revenue_impact?: number | null
           show_to_all?: boolean | null
           sku?: string
           start_time?: string | null
@@ -367,6 +396,7 @@ export type Database = {
           target_segments?: string[] | null
           type?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -418,6 +448,287 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "interactions_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_accepts: {
+        Row: {
+          accepted_at: string
+          check_in_id: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          impression_id: string | null
+          offer_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          check_in_id?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          impression_id?: string | null
+          offer_id: string
+        }
+        Update: {
+          accepted_at?: string
+          check_in_id?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          impression_id?: string | null
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_accepts_check_in_id_fkey"
+            columns: ["check_in_id"]
+            isOneToOne: false
+            referencedRelation: "check_ins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_accepts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_accepts_impression_id_fkey"
+            columns: ["impression_id"]
+            isOneToOne: false
+            referencedRelation: "offer_impressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_accepts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_declines: {
+        Row: {
+          created_at: string
+          customer_id: string
+          declined_at: string
+          id: string
+          impression_id: string | null
+          offer_id: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          declined_at?: string
+          id?: string
+          impression_id?: string | null
+          offer_id: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          declined_at?: string
+          id?: string
+          impression_id?: string | null
+          offer_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_declines_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_declines_impression_id_fkey"
+            columns: ["impression_id"]
+            isOneToOne: false
+            referencedRelation: "offer_impressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_declines_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_impressions: {
+        Row: {
+          campaign_id: string | null
+          check_in_id: string | null
+          created_at: string
+          customer_id: string
+          flash_promo_id: string | null
+          id: string
+          offer_id: string
+          position_in_feed: number | null
+          retailer_id: string
+          shown_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          check_in_id?: string | null
+          created_at?: string
+          customer_id: string
+          flash_promo_id?: string | null
+          id?: string
+          offer_id: string
+          position_in_feed?: number | null
+          retailer_id: string
+          shown_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          check_in_id?: string | null
+          created_at?: string
+          customer_id?: string
+          flash_promo_id?: string | null
+          id?: string
+          offer_id?: string
+          position_in_feed?: number | null
+          retailer_id?: string
+          shown_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_impressions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_impressions_check_in_id_fkey"
+            columns: ["check_in_id"]
+            isOneToOne: false
+            referencedRelation: "check_ins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_impressions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_impressions_flash_promo_id_fkey"
+            columns: ["flash_promo_id"]
+            isOneToOne: false
+            referencedRelation: "flash_promos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_impressions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_impressions_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_redemptions: {
+        Row: {
+          accept_id: string
+          basket_total: number | null
+          campaign_id: string | null
+          created_at: string
+          customer_id: string
+          discount_applied: number
+          flash_promo_id: string | null
+          id: string
+          offer_id: string
+          redeemed_at: string
+          retailer_id: string
+          revenue_impact: number | null
+        }
+        Insert: {
+          accept_id: string
+          basket_total?: number | null
+          campaign_id?: string | null
+          created_at?: string
+          customer_id: string
+          discount_applied: number
+          flash_promo_id?: string | null
+          id?: string
+          offer_id: string
+          redeemed_at?: string
+          retailer_id: string
+          revenue_impact?: number | null
+        }
+        Update: {
+          accept_id?: string
+          basket_total?: number | null
+          campaign_id?: string | null
+          created_at?: string
+          customer_id?: string
+          discount_applied?: number
+          flash_promo_id?: string | null
+          id?: string
+          offer_id?: string
+          redeemed_at?: string
+          retailer_id?: string
+          revenue_impact?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_redemptions_accept_id_fkey"
+            columns: ["accept_id"]
+            isOneToOne: false
+            referencedRelation: "offer_accepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_flash_promo_id_fkey"
+            columns: ["flash_promo_id"]
+            isOneToOne: false
+            referencedRelation: "flash_promos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_retailer_id_fkey"
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
