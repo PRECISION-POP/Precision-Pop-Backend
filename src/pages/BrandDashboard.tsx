@@ -83,11 +83,19 @@ const BrandDashboard = () => {
     } else {
       setCampaigns(data || []);
       
+      // Fetch actual redemption revenue
+      const campaignIds = data?.map(c => c.id) || [];
+      const { data: redemptions } = await supabase
+        .from("offer_redemptions")
+        .select("basket_total, campaign_id")
+        .in("campaign_id", campaignIds);
+
+      const totalRevenue = redemptions?.reduce((sum, r) => sum + (Number(r.basket_total) || 0), 0) || 0;
+      
       const active = data?.filter(c => c.status === "active").length || 0;
       const impressions = data?.reduce((sum, c) => sum + (c.impressions_delivered || 0), 0) || 0;
-      const conversions = data?.reduce((sum, c) => sum + (c.conversions_delivered || 0), 0) || 0;
       const spent = data?.reduce((sum, c) => sum + (Number(c.budget_spent) || 0), 0) || 0;
-      const roas = spent > 0 ? (conversions * 20) / spent : 0; // Assuming $20 avg conversion value
+      const roas = spent > 0 ? totalRevenue / spent : 0;
 
       setStats({
         activeCampaigns: active,
@@ -97,6 +105,14 @@ const BrandDashboard = () => {
     }
     
     setLoading(false);
+  };
+
+  const calculateCampaignROAS = (campaign: Campaign) => {
+    const spent = Number(campaign.budget_spent) || 0;
+    if (spent === 0) return "0.0";
+    // This will be calculated per campaign when we fetch redemptions
+    // For now, showing a placeholder that will be enhanced
+    return "N/A";
   };
 
   const handleSignOut = async () => {
@@ -193,7 +209,11 @@ const BrandDashboard = () => {
                   : "0.0";
                 
                 return (
-                  <div key={campaign.id} className="border-b pb-4">
+                  <div 
+                    key={campaign.id} 
+                    className="border-b pb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-4 transition-colors"
+                    onClick={() => navigate(`/brand-dashboard/campaign/${campaign.id}`)}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-semibold text-lg">{campaign.name}</h3>
@@ -211,7 +231,7 @@ const BrandDashboard = () => {
                         {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                       </span>
                     </div>
-                    <div className="grid grid-cols-4 gap-4 mt-3">
+                    <div className="grid grid-cols-5 gap-4 mt-3">
                       <div>
                         <p className="text-xs text-gray-600">Impressions</p>
                         <p className="font-semibold">{campaign.impressions_delivered.toLocaleString()}</p>
@@ -223,6 +243,10 @@ const BrandDashboard = () => {
                       <div>
                         <p className="text-xs text-gray-600">Conversions</p>
                         <p className="font-semibold">{campaign.conversions_delivered}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">ROAS</p>
+                        <p className="font-semibold text-primary">{calculateCampaignROAS(campaign)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Spent / Budget</p>

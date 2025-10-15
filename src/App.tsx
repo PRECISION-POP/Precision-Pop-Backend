@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import BrandDashboard from "./pages/BrandDashboard";
 import BrowseSegments from "./pages/BrowseSegments";
 import CreateCampaign from "./pages/CreateCampaign";
+import CampaignDetails from "./pages/CampaignDetails";
 import GrocerDashboard from "./pages/GrocerDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/brand-dashboard" element={<BrandDashboard />} />
           <Route path="/brand-dashboard/segments" element={<BrowseSegments />} />
           <Route path="/brand-dashboard/create-campaign" element={<CreateCampaign />} />
+          <Route path="/brand-dashboard/campaign/:campaignId" element={<CampaignDetails />} />
           <Route path="/grocer-dashboard/*" element={<GrocerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
