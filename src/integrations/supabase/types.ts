@@ -14,7 +14,214 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      check_ins: {
+        Row: {
+          billable_impressions: Json | null
+          campaigns_shown: string[] | null
+          check_in_method: Database["public"]["Enums"]["check_in_method"] | null
+          check_in_time: string
+          created_at: string
+          customer_id: string
+          id: string
+          retailer_id: string
+          session_duration: number | null
+          updated_at: string
+        }
+        Insert: {
+          billable_impressions?: Json | null
+          campaigns_shown?: string[] | null
+          check_in_method?:
+            | Database["public"]["Enums"]["check_in_method"]
+            | null
+          check_in_time?: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          retailer_id: string
+          session_duration?: number | null
+          updated_at?: string
+        }
+        Update: {
+          billable_impressions?: Json | null
+          campaigns_shown?: string[] | null
+          check_in_method?:
+            | Database["public"]["Enums"]["check_in_method"]
+            | null
+          check_in_time?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          retailer_id?: string
+          session_duration?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_promos: {
+        Row: {
+          auto_disable_at_zero: boolean | null
+          category: string | null
+          created_at: string
+          created_by: string
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          discounted_price: number | null
+          end_time: string
+          id: string
+          metrics: Json | null
+          priority: Database["public"]["Enums"]["promo_priority"] | null
+          product_name: string
+          regular_price: number | null
+          retailer_id: string
+          show_to_all: boolean | null
+          sku: string
+          start_time: string | null
+          status: Database["public"]["Enums"]["promo_status"] | null
+          stock_initial: number | null
+          stock_remaining: number | null
+          target_segments: string[] | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_disable_at_zero?: boolean | null
+          category?: string | null
+          created_at?: string
+          created_by: string
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          discounted_price?: number | null
+          end_time: string
+          id?: string
+          metrics?: Json | null
+          priority?: Database["public"]["Enums"]["promo_priority"] | null
+          product_name: string
+          regular_price?: number | null
+          retailer_id: string
+          show_to_all?: boolean | null
+          sku: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["promo_status"] | null
+          stock_initial?: number | null
+          stock_remaining?: number | null
+          target_segments?: string[] | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_disable_at_zero?: boolean | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          discounted_price?: number | null
+          end_time?: string
+          id?: string
+          metrics?: Json | null
+          priority?: Database["public"]["Enums"]["promo_priority"] | null
+          product_name?: string
+          regular_price?: number | null
+          retailer_id?: string
+          show_to_all?: boolean | null
+          sku?: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["promo_status"] | null
+          stock_initial?: number | null
+          stock_remaining?: number | null
+          target_segments?: string[] | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_promos_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactions: {
+        Row: {
+          campaign_id: string | null
+          campaign_type: string | null
+          created_at: string
+          customer_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          retailer_id: string
+          timestamp: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          campaign_type?: string | null
+          created_at?: string
+          customer_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          retailer_id: string
+          timestamp?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          campaign_type?: string | null
+          created_at?: string
+          customer_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          retailer_id?: string
+          timestamp?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retailers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +230,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      check_in_method: "geofence" | "BLE" | "manual" | "NFC"
+      discount_type: "fixed" | "percentage"
+      promo_priority: "high" | "normal"
+      promo_status: "active" | "completed" | "autoDisabled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +360,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      check_in_method: ["geofence", "BLE", "manual", "NFC"],
+      discount_type: ["fixed", "percentage"],
+      promo_priority: ["high", "normal"],
+      promo_status: ["active", "completed", "autoDisabled"],
+    },
   },
 } as const
