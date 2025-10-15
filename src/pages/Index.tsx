@@ -1,12 +1,38 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Package, Store } from "lucide-react";
 
 const Index = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-4">
       <div className="text-center mb-12">
         <h1 className="text-6xl font-bold text-white mb-4">Precision POP</h1>
         <p className="text-2xl text-white/90 italic">"Why check out, when you can check in?"</p>
+      </div>
+
+      <div className="flex gap-4 mb-8">
+        {!isAuthenticated && (
+          <Button onClick={() => navigate("/auth")} size="lg">
+            Sign In / Sign Up
+          </Button>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 max-w-5xl w-full">
