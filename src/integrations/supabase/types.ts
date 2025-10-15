@@ -14,6 +14,162 @@ export type Database = {
   }
   public: {
     Tables: {
+      accepted_offers: {
+        Row: {
+          accepted_at: string
+          check_in_id: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          offer_id: string
+          redeemed: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string
+          check_in_id?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          offer_id: string
+          redeemed?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string
+          check_in_id?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          offer_id?: string
+          redeemed?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accepted_offers_check_in_id_fkey"
+            columns: ["check_in_id"]
+            isOneToOne: false
+            referencedRelation: "check_ins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accepted_offers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accepted_offers_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brands: {
+        Row: {
+          contact_email: string
+          created_at: string
+          id: string
+          name: string
+          subscription_tier:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          total_spend: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          contact_email: string
+          created_at?: string
+          id?: string
+          name: string
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          total_spend?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contact_email?: string
+          created_at?: string
+          id?: string
+          name?: string
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          total_spend?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          bid_amount: number
+          bid_type: Database["public"]["Enums"]["bid_type"] | null
+          brand_id: string
+          budget_spent: number | null
+          budget_total: number
+          created_at: string
+          creative_url: string | null
+          discount_value: number | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: Database["public"]["Enums"]["campaign_status"] | null
+          target_segments: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          bid_amount: number
+          bid_type?: Database["public"]["Enums"]["bid_type"] | null
+          brand_id: string
+          budget_spent?: number | null
+          budget_total: number
+          created_at?: string
+          creative_url?: string | null
+          discount_value?: number | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          target_segments?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          bid_amount?: number
+          bid_type?: Database["public"]["Enums"]["bid_type"] | null
+          brand_id?: string
+          budget_spent?: number | null
+          budget_total?: number
+          created_at?: string
+          creative_url?: string | null
+          discount_value?: number | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          target_segments?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       check_ins: {
         Row: {
           billable_impressions: Json | null
@@ -58,6 +214,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "check_ins_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_segments: {
+        Row: {
+          avg_basket_value: number | null
+          created_at: string
+          customer_count: number | null
+          definition: Json
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          avg_basket_value?: number | null
+          created_at?: string
+          customer_count?: number | null
+          definition: Json
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          avg_basket_value?: number | null
+          created_at?: string
+          customer_count?: number | null
+          definition?: Json
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string
+          id: string
+          loyalty_card_number: string | null
+          phone_number: string | null
+          purchase_history: Json | null
+          retailer_id: string
+          segments: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          loyalty_card_number?: string | null
+          phone_number?: string | null
+          purchase_history?: Json | null
+          retailer_id: string
+          segments?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          loyalty_card_number?: string | null
+          phone_number?: string | null
+          purchase_history?: Json | null
+          retailer_id?: string
+          segments?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_retailer_id_fkey"
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
@@ -198,6 +425,124 @@ export type Database = {
           },
         ]
       }
+      offers: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          discount_value: number
+          flash_promo_id: string | null
+          id: string
+          image_url: string | null
+          product_name: string
+          sku: string | null
+          type: Database["public"]["Enums"]["offer_type"]
+          updated_at: string
+          valid_until: string
+          video_url: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          discount_value: number
+          flash_promo_id?: string | null
+          id?: string
+          image_url?: string | null
+          product_name: string
+          sku?: string | null
+          type: Database["public"]["Enums"]["offer_type"]
+          updated_at?: string
+          valid_until: string
+          video_url?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          discount_value?: number
+          flash_promo_id?: string | null
+          id?: string
+          image_url?: string | null
+          product_name?: string
+          sku?: string | null
+          type?: Database["public"]["Enums"]["offer_type"]
+          updated_at?: string
+          valid_until?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_flash_promo_id_fkey"
+            columns: ["flash_promo_id"]
+            isOneToOne: false
+            referencedRelation: "flash_promos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redemptions: {
+        Row: {
+          accepted_offer_id: string
+          basket_total: number | null
+          created_at: string
+          customer_id: string
+          discount_applied: number
+          id: string
+          redeemed_at: string
+          retailer_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_offer_id: string
+          basket_total?: number | null
+          created_at?: string
+          customer_id: string
+          discount_applied: number
+          id?: string
+          redeemed_at?: string
+          retailer_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_offer_id?: string
+          basket_total?: number | null
+          created_at?: string
+          customer_id?: string
+          discount_applied?: number
+          id?: string
+          redeemed_at?: string
+          retailer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redemptions_accepted_offer_id_fkey"
+            columns: ["accepted_offer_id"]
+            isOneToOne: false
+            referencedRelation: "accepted_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redemptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redemptions_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retailers: {
         Row: {
           created_at: string
@@ -222,6 +567,47 @@ export type Database = {
         }
         Relationships: []
       }
+      stores: {
+        Row: {
+          address: string | null
+          beacon_ids: string[] | null
+          created_at: string
+          geofence_coordinates: Json | null
+          id: string
+          name: string
+          retailer_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          beacon_ids?: string[] | null
+          created_at?: string
+          geofence_coordinates?: Json | null
+          id?: string
+          name: string
+          retailer_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          beacon_ids?: string[] | null
+          created_at?: string
+          geofence_coordinates?: Json | null
+          id?: string
+          name?: string
+          retailer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -230,10 +616,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      bid_type: "cpm" | "cpc"
+      campaign_status: "draft" | "active" | "paused" | "completed"
       check_in_method: "geofence" | "BLE" | "manual" | "NFC"
       discount_type: "fixed" | "percentage"
+      offer_type: "campaign" | "flash" | "standard"
       promo_priority: "high" | "normal"
       promo_status: "active" | "completed" | "autoDisabled"
+      subscription_tier: "free" | "basic" | "premium" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -361,10 +751,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      bid_type: ["cpm", "cpc"],
+      campaign_status: ["draft", "active", "paused", "completed"],
       check_in_method: ["geofence", "BLE", "manual", "NFC"],
       discount_type: ["fixed", "percentage"],
+      offer_type: ["campaign", "flash", "standard"],
       promo_priority: ["high", "normal"],
       promo_status: ["active", "completed", "autoDisabled"],
+      subscription_tier: ["free", "basic", "premium", "enterprise"],
     },
   },
 } as const
