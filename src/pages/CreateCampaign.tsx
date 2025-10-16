@@ -17,6 +17,8 @@ const CreateCampaign = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [availableSegments, setAvailableSegments] = useState<string[]>([]);
+  const [availableStores, setAvailableStores] = useState<Array<{id: string, name: string, retailer: string}>>([]);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,7 +38,27 @@ const CreateCampaign = () => {
   useEffect(() => {
     fetchBrandId();
     fetchSegments();
+    fetchStores();
   }, []);
+
+  const fetchStores = async () => {
+    const { data } = await supabase
+      .from("stores")
+      .select(`
+        id,
+        name,
+        retailers(name)
+      `)
+      .order("name");
+    
+    const formattedStores = data?.map(store => ({
+      id: store.id,
+      name: store.name,
+      retailer: (store.retailers as any)?.name || "Unknown"
+    })) || [];
+    
+    setAvailableStores(formattedStores);
+  };
 
   const fetchBrandId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -306,6 +328,38 @@ const CreateCampaign = () => {
                   Or <Button variant="link" className="h-auto p-0" onClick={() => navigate("/brand-dashboard/segments")}>
                     browse all segments
                   </Button>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Target Store Locations (Optional)</Label>
+                <Select
+                  value={selectedStores.length > 0 ? selectedStores[0] : "all"}
+                  onValueChange={(value) => {
+                    if (value === "all") {
+                      setSelectedStores([]);
+                    } else {
+                      setSelectedStores([value]);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All stores (recommended)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stores (Maximum Reach)</SelectItem>
+                    {availableStores.map(store => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.name} ({store.retailer})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {selectedStores.length === 0 
+                    ? "Campaign will run in all participating stores" 
+                    : `Campaign will run in ${selectedStores.length} selected store(s)`
+                  }
                 </p>
               </div>
 

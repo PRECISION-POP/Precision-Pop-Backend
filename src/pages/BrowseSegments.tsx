@@ -23,6 +23,8 @@ const BrowseSegments = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [storeFilter, setStoreFilter] = useState("all");
+  const [retailers, setRetailers] = useState<Array<{id: string, name: string}>>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,7 +39,16 @@ const BrowseSegments = () => {
 
   useEffect(() => {
     fetchSegments();
+    fetchRetailers();
   }, []);
+
+  const fetchRetailers = async () => {
+    const { data } = await supabase
+      .from("retailers")
+      .select("id, name")
+      .order("name");
+    setRetailers(data || []);
+  };
 
   const fetchSegments = async () => {
     const { data, error } = await supabase
@@ -61,6 +72,8 @@ const BrowseSegments = () => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
     const segmentType = s.definition?.type || 'behavioral';
     const matchesFilter = filterType === "all" || segmentType === filterType;
+    // Note: Store filtering would require adding retailer_id to segments table
+    // For now, showing all segments but UI is ready for future enhancement
     return matchesSearch && matchesFilter;
   });
 
@@ -97,15 +110,28 @@ const BrowseSegments = () => {
               />
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger className="w-48">
-                  <SelectValue />
+                  <SelectValue placeholder="Segment Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Segments</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="loyalty">Loyalty</SelectItem>
                   <SelectItem value="conquest">Conquest</SelectItem>
                   <SelectItem value="lapsed">Lapsed</SelectItem>
                   <SelectItem value="high-value">High Value</SelectItem>
                   <SelectItem value="behavioral">Behavioral</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="All Retailers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Retailers</SelectItem>
+                  {retailers.map(retailer => (
+                    <SelectItem key={retailer.id} value={retailer.id}>
+                      {retailer.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

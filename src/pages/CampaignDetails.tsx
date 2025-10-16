@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, BarChart3, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, Target, TrendingUp, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Campaign {
   id: string;
@@ -28,12 +29,23 @@ interface Redemption {
   redeemed_at: string;
 }
 
+interface StorePerformance {
+  store_name: string;
+  retailer_name: string;
+  impressions: number;
+  accepts: number;
+  redemptions: number;
+  revenue: number;
+  roas: number;
+}
+
 const CampaignDetails = () => {
   const { campaignId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [storePerformance, setStorePerformance] = useState<StorePerformance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,8 +79,76 @@ const CampaignDetails = () => {
       .eq("campaign_id", campaignId)
       .order("redeemed_at", { ascending: false });
 
+    // Fetch store-level performance
+    const { data: impressionsData } = await supabase
+      .from("offer_impressions")
+      .select(`
+        retailer_id,
+        stores!inner(name),
+        retailers!inner(name)
+      `)
+      .eq("campaign_id", campaignId);
+
+    const { data: acceptsData } = await supabase
+      .from("offer_accepts")
+      .select(`
+        customer_id,
+        customers!inner(retailer_id)
+      `)
+      .eq("offer_id", campaignData?.id);
+
+    const { data: redemptionsByStore } = await supabase
+      .from("offer_redemptions")
+      .select(`
+        retailer_id,
+        basket_total,
+        discount_applied,
+        stores!inner(name),
+        retailers!inner(name)
+      `)
+      .eq("campaign_id", campaignId);
+
+    // Aggregate by store
+    const storeMap = new Map<string, StorePerformance>();
+
+    impressionsData?.forEach((imp: any) => {
+      const key = `${imp.retailer_id}`;
+      if (!storeMap.has(key)) {
+        storeMap.set(key, {
+          store_name: imp.stores?.name || "Unknown Store",
+          retailer_name: imp.retailers?.name || "Unknown Retailer",
+          impressions: 0,
+          accepts: 0,
+          redemptions: 0,
+          revenue: 0,
+          roas: 0,
+        });
+      }
+      const store = storeMap.get(key)!;
+      store.impressions++;
+    });
+
+    redemptionsByStore?.forEach((red: any) => {
+      const key = `${red.retailer_id}`;
+      if (storeMap.has(key)) {
+        const store = storeMap.get(key)!;
+        store.redemptions++;
+        store.revenue += Number(red.basket_total) || 0;
+      }
+    });
+
+    // Calculate ROAS for each store
+    const bidAmount = Number(campaignData?.bid_amount) || 0;
+    storeMap.forEach((store) => {
+      const spent = store.impressions * bidAmount / (campaignData?.bid_type === 'cpm' ? 1000 : 1);
+      store.roas = spent > 0 ? store.revenue / spent : 0;
+    });
+
+    const sortedStores = Array.from(storeMap.values()).sort((a, b) => b.roas - a.roas);
+
     setCampaign(campaignData);
     setRedemptions(redemptionData || []);
+    setStorePerformance(sortedStores);
     setLoading(false);
   };
 
@@ -214,6 +294,52 @@ const CampaignDetails = () => {
             </div>
           </Card>
         </div>
+
+        {/* Store Performance Breakdown */}
+        {storePerformance.length > 0 && (
+          <Card className="p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <MapPin className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-bold">Performance by Store Location</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Compare campaign performance across different retail locations
+            </p>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Store / Retailer</TableHead>
+                    <TableHead className="text-right">Impressions</TableHead>
+                    <TableHead className="text-right">Redemptions</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">ROAS</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {storePerformance.map((store, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <div>
+                          <p className="font-semibold">{store.store_name}</p>
+                          <p className="text-sm text-gray-600">{store.retailer_name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{store.impressions.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{store.redemptions}</TableCell>
+                      <TableCell className="text-right">${store.revenue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={store.roas > 20 ? "text-green-600 font-semibold" : store.roas > 10 ? "text-primary" : "text-orange-600"}>
+                          {store.roas.toFixed(1)}x {store.roas > 20 ? "⭐" : ""}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6">
           <h2 className="text-xl font-bold mb-4">Recent Redemptions</h2>
