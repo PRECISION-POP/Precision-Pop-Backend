@@ -15,8 +15,7 @@ const GrocerDashboard = () => {
   const [stats, setStats] = useState({
     todayCheckIns: 0,
     activePromos: 0,
-    todayRevenue: 0,
-    satisfaction: 4.8
+    todayRevenue: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -108,8 +107,7 @@ const GrocerDashboard = () => {
     setStats({
       todayCheckIns: todayCheckInCount,
       activePromos: promos?.length || 0,
-      todayRevenue: revenue,
-      satisfaction: 4.8
+      todayRevenue: revenue
     });
 
     setFlashPromos(promos || []);
@@ -158,7 +156,7 @@ const GrocerDashboard = () => {
         <h1 className="text-3xl font-bold mb-2">{storeName}</h1>
         <p className="text-gray-600 mb-8">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-sm text-gray-600 mb-2">Today's Check-ins</p>
             <p className="text-3xl font-bold text-gray-900">{stats.todayCheckIns}</p>
@@ -170,10 +168,6 @@ const GrocerDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-sm text-gray-600 mb-2">Media Revenue (Today)</p>
             <p className="text-3xl font-bold text-green-600">${stats.todayRevenue.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow">
-            <p className="text-sm text-gray-600 mb-2">Customer Satisfaction</p>
-            <p className="text-3xl font-bold text-yellow-500">{stats.satisfaction}⭐</p>
           </div>
         </div>
 
