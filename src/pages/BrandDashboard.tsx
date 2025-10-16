@@ -15,6 +15,8 @@ interface Campaign {
   budget_spent: number;
   budget_total: number;
   target_segments: string[];
+  revenue?: number;
+  roas?: number;
 }
 
 const BrandDashboard = () => {
@@ -81,20 +83,36 @@ const BrandDashboard = () => {
         variant: "destructive",
       });
     } else {
-      setCampaigns(data || []);
-      
-      // Fetch actual redemption revenue
+      // Fetch redemptions grouped by campaign
       const campaignIds = data?.map(c => c.id) || [];
       const { data: redemptions } = await supabase
         .from("offer_redemptions")
         .select("basket_total, campaign_id")
         .in("campaign_id", campaignIds);
 
-      const totalRevenue = redemptions?.reduce((sum, r) => sum + (Number(r.basket_total) || 0), 0) || 0;
+      // Calculate revenue per campaign
+      const revenuePerCampaign = redemptions?.reduce((acc, r) => {
+        const campaignId = r.campaign_id;
+        acc[campaignId] = (acc[campaignId] || 0) + (Number(r.basket_total) || 0);
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Add ROAS to each campaign
+      const campaignsWithROAS = data?.map(campaign => ({
+        ...campaign,
+        revenue: revenuePerCampaign[campaign.id] || 0,
+        roas: Number(campaign.budget_spent) > 0 
+          ? (revenuePerCampaign[campaign.id] || 0) / Number(campaign.budget_spent)
+          : 0
+      })) || [];
+
+      setCampaigns(campaignsWithROAS);
       
-      const active = data?.filter(c => c.status === "active").length || 0;
-      const impressions = data?.reduce((sum, c) => sum + (c.impressions_delivered || 0), 0) || 0;
-      const spent = data?.reduce((sum, c) => sum + (Number(c.budget_spent) || 0), 0) || 0;
+      // Calculate aggregate stats
+      const totalRevenue = Object.values(revenuePerCampaign).reduce((sum, rev) => sum + rev, 0);
+      const active = campaignsWithROAS.filter(c => c.status === "active").length;
+      const impressions = campaignsWithROAS.reduce((sum, c) => sum + (c.impressions_delivered || 0), 0);
+      const spent = campaignsWithROAS.reduce((sum, c) => sum + (Number(c.budget_spent) || 0), 0);
       const roas = spent > 0 ? totalRevenue / spent : 0;
 
       setStats({
@@ -108,11 +126,7 @@ const BrandDashboard = () => {
   };
 
   const calculateCampaignROAS = (campaign: Campaign) => {
-    const spent = Number(campaign.budget_spent) || 0;
-    if (spent === 0) return "0.0";
-    // This will be calculated per campaign when we fetch redemptions
-    // For now, showing a placeholder that will be enhanced
-    return "N/A";
+    return campaign.roas ? campaign.roas.toFixed(1) + "x" : "0.0x";
   };
 
   const handleSignOut = async () => {
