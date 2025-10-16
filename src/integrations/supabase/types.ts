@@ -927,7 +927,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      bid_type: "cpm" | "cpc"
+      bid_type: "cpm" | "cpc" | "cpa"
       campaign_status: "draft" | "active" | "paused" | "completed"
       check_in_method: "geofence" | "BLE" | "manual" | "NFC"
       discount_type: "fixed" | "percentage"
@@ -1062,7 +1062,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      bid_type: ["cpm", "cpc"],
+      bid_type: ["cpm", "cpc", "cpa"],
       campaign_status: ["draft", "active", "paused", "completed"],
       check_in_method: ["geofence", "BLE", "manual", "NFC"],
       discount_type: ["fixed", "percentage"],
