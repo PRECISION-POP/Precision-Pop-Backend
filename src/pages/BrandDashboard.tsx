@@ -42,6 +42,14 @@ const BrandDashboard = () => {
   }, [brandId]);
 
   const checkAuth = async () => {
+    // DEV MODE: Bypass auth for testing
+    const devMode = localStorage.getItem('GOD_MODE') === 'true';
+    if (devMode) {
+      setBrandId('dev-brand-001');
+      console.log('🔓 GOD MODE: Brand Dashboard - Using dev brand ID');
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {

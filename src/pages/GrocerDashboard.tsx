@@ -32,6 +32,15 @@ const GrocerDashboard = () => {
   }, [retailerId, timeRange]);
 
   const checkAuth = async () => {
+    // DEV MODE: Bypass auth for testing
+    const devMode = localStorage.getItem('GOD_MODE') === 'true';
+    if (devMode) {
+      setRetailerId('dev-retailer-001');
+      setStoreName('Dev Store (God Mode)');
+      console.log('🔓 GOD MODE: Grocer Dashboard - Using dev retailer ID');
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/auth");
