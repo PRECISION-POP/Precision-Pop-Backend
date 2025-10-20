@@ -105,19 +105,14 @@ const CouponManager = () => {
   const fetchCouponBids = async (couponId: string) => {
     const { data, error } = await supabase
       .from("coupon_bids")
-      .select(`
-        *,
-        brands (
-          name
-        )
-      `)
+      .select("*")
       .eq("coupon_id", couponId)
       .eq("status", "active");
 
     if (!error && data) {
       setCouponBids(prev => ({
         ...prev,
-        [couponId]: data,
+        [couponId]: data as any,
       }));
     }
   };
@@ -485,7 +480,7 @@ const CouponManager = () => {
                               className="flex items-center justify-between p-3 bg-muted rounded-lg"
                             >
                               <div>
-                                <p className="font-medium">{bid.brands.name}</p>
+                                <p className="font-medium">{bid.brand_id}</p>
                                 <p className="text-sm text-muted-foreground">
                                   Bid: ${bid.bid_amount.toFixed(4)} per impression
                                 </p>

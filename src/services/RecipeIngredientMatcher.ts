@@ -114,19 +114,19 @@ class RecipeIngredientMatcher {
   }
 
   /**
-   * Increment impression count for a bid
+   * Increment impression count for a bid (placements_delivered)
    */
   private async incrementImpression(bidId: string) {
     const { data: bid } = await supabase
       .from("ingredient_bids")
-      .select("impressions_delivered")
+      .select("placements_delivered")
       .eq("id", bidId)
       .maybeSingle();
 
     if (bid) {
       await supabase
         .from("ingredient_bids")
-        .update({ impressions_delivered: bid.impressions_delivered + 1 })
+        .update({ placements_delivered: bid.placements_delivered + 1 })
         .eq("id", bidId);
     }
   }
@@ -137,14 +137,14 @@ class RecipeIngredientMatcher {
   private async incrementSwapCount(bidId: string) {
     const { data: bid } = await supabase
       .from("ingredient_bids")
-      .select("swaps_count")
+      .select("swapped")
       .eq("id", bidId)
-      .single();
+      .maybeSingle();
 
     if (bid) {
       await supabase
         .from("ingredient_bids")
-        .update({ swaps_count: bid.swaps_count + 1 })
+        .update({ swapped: bid.swapped + 1 })
         .eq("id", bidId);
     }
   }
