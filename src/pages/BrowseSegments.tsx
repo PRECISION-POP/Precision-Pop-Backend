@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Users, DollarSign, TrendingUp, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 interface Segment {
   id: string;
@@ -78,7 +79,8 @@ const BrowseSegments = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <BrandDashboardLayout>
+      <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -258,6 +260,7 @@ const BrowseSegments = () => {
         )}
       </div>
     </div>
+    </BrandDashboardLayout>
   );
 };
 

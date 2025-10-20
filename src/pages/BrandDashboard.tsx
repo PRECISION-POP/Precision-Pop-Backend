@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Package, PlusCircle, Target, Home, LogOut, DollarSign, ChefHat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 interface Campaign {
   id: string;
@@ -109,90 +110,18 @@ const BrandDashboard = () => {
     return campaign.roas ? campaign.roas.toFixed(1) + "x" : "0.0x";
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading dashboard...</p>
-      </div>
+      <BrandDashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <p>Loading dashboard...</p>
+        </div>
+      </BrandDashboardLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-primary">Precision POP</h1>
-          <p className="text-sm text-gray-400">Brand Dashboard</p>
-        </div>
-        <nav className="space-y-2">
-          <Link 
-            to="/brand-dashboard" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary"
-          >
-            <BarChart3 className="w-5 h-5" />
-            Dashboard
-          </Link>
-          
-          <Link 
-            to="/brand-dashboard/digital-slotting" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <DollarSign className="w-5 h-5" />
-            Digital Slotting
-          </Link>
-          
-          <Link 
-            to="/brand-dashboard/recipe-bidding" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <ChefHat className="w-5 h-5" />
-            Recipe Bidding
-          </Link>
-          
-          <Link 
-            to="/brand-dashboard/segments" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <Target className="w-5 h-5" />
-            Browse Segments
-          </Link>
-          
-          <Link 
-            to="/brand-dashboard/create-campaign" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <PlusCircle className="w-5 h-5" />
-            Create Campaign
-          </Link>
-          
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Package className="w-5 h-5" />
-            Analytics
-          </a>
-          
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Home className="w-5 h-5" />
-            Home
-          </Link>
-        </nav>
-        <div className="mt-auto pt-6">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-white hover:bg-gray-800"
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sign Out
-          </Button>
-        </div>
-      </aside>
-
+    <BrandDashboardLayout>
       {/* Main Content */}
       <main className="flex-1 bg-gray-50 p-8">
         <h1 className="text-3xl font-bold mb-8">Campaign Overview</h1>
@@ -283,7 +212,7 @@ const BrandDashboard = () => {
           )}
         </div>
       </main>
-    </div>
+    </BrandDashboardLayout>
   );
 };
 

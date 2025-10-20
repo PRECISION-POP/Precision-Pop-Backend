@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
@@ -199,7 +200,8 @@ const CreateCampaign = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <BrandDashboardLayout>
+      <div className="min-h-screen bg-background p-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -428,6 +430,7 @@ const CreateCampaign = () => {
         </Card>
       </div>
     </div>
+    </BrandDashboardLayout>
   );
 };
 

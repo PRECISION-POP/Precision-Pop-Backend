@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChefHat, Target, Search, AlertTriangle, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 const RecipeBidding = () => {
   const { toast } = useToast();
@@ -159,7 +160,8 @@ const RecipeBidding = () => {
   );
 
   return (
-    <div className="p-8">
+    <BrandDashboardLayout>
+      <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
           <ChefHat className="w-8 h-8 text-primary" />
@@ -427,6 +429,7 @@ const RecipeBidding = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </BrandDashboardLayout>
   );
 };
 

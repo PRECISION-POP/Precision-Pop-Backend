@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Target, AlertTriangle, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BidAnalyticsChart from "@/components/BidAnalyticsChart";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 const DigitalSlotting = () => {
   const { toast } = useToast();
@@ -196,7 +197,8 @@ const DigitalSlotting = () => {
   };
 
   return (
-    <div className="p-8">
+    <BrandDashboardLayout>
+      <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Digital Slotting Marketplace</h1>
         <p className="text-gray-600">
@@ -484,6 +486,7 @@ const DigitalSlotting = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </BrandDashboardLayout>
   );
 };
 

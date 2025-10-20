@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import BrandDashboardLayout from "@/components/BrandDashboardLayout";
 
 interface Campaign {
   id: string;
@@ -175,7 +176,8 @@ const CampaignDetails = () => {
   const roas = spent > 0 ? (totalRevenue / spent).toFixed(2) : "0.00";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <BrandDashboardLayout>
+      <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-8">
         <Button
           variant="ghost"
@@ -370,6 +372,7 @@ const CampaignDetails = () => {
         </Card>
       </div>
     </div>
+    </BrandDashboardLayout>
   );
 };
 
