@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Package, PlusCircle, Target, Home, LogOut, Gift, ChefHat } from "lucide-react";
+import { BarChart3, Package, PlusCircle, Target, Home, LogOut, DollarSign, ChefHat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
@@ -131,30 +131,51 @@ const BrandDashboard = () => {
           <p className="text-sm text-gray-400">Brand Dashboard</p>
         </div>
         <nav className="space-y-2">
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary">
+          <Link 
+            to="/brand-dashboard" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary"
+          >
             <BarChart3 className="w-5 h-5" />
             Dashboard
-          </a>
-          <Link to="/brand-dashboard/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Target className="w-5 h-5" />
-            Browse Segments
           </Link>
-          <Link to="/brand-dashboard/create-campaign" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <PlusCircle className="w-5 h-5" />
-            Create Campaign
-          </Link>
-          <Link to="/brand-dashboard/digital-slotting" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Gift className="w-5 h-5" />
+          
+          <Link 
+            to="/brand-dashboard/digital-slotting" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <DollarSign className="w-5 h-5" />
             Digital Slotting
           </Link>
-          <Link to="/brand-dashboard/recipe-bidding" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
+          
+          <Link 
+            to="/brand-dashboard/recipe-bidding" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+          >
             <ChefHat className="w-5 h-5" />
             Recipe Bidding
           </Link>
+          
+          <Link 
+            to="/brand-dashboard/segments" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Target className="w-5 h-5" />
+            Browse Segments
+          </Link>
+          
+          <Link 
+            to="/brand-dashboard/create-campaign" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Create Campaign
+          </Link>
+          
           <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
             <Package className="w-5 h-5" />
             Analytics
           </a>
+          
           <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
             <Home className="w-5 h-5" />
             Home
