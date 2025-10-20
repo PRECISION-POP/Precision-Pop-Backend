@@ -233,6 +233,125 @@ export type Database = {
           },
         ]
       }
+      coupon_bids: {
+        Row: {
+          bid_amount: number
+          bid_type: string | null
+          brand_id: string
+          conversions_delivered: number | null
+          coupon_id: string
+          created_at: string | null
+          id: string
+          impressions_delivered: number | null
+          status: string | null
+        }
+        Insert: {
+          bid_amount: number
+          bid_type?: string | null
+          brand_id: string
+          conversions_delivered?: number | null
+          coupon_id: string
+          created_at?: string | null
+          id?: string
+          impressions_delivered?: number | null
+          status?: string | null
+        }
+        Update: {
+          bid_amount?: number
+          bid_type?: string | null
+          brand_id?: string
+          conversions_delivered?: number | null
+          coupon_id?: string
+          created_at?: string | null
+          id?: string
+          impressions_delivered?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_bids_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_bids_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          bidding_enabled: boolean | null
+          brand: string
+          category: string
+          created_at: string | null
+          description: string | null
+          expiration: string | null
+          id: string
+          image_url: string | null
+          impressions: number | null
+          max_uses: number | null
+          min_purchase: number | null
+          redemptions: number | null
+          retailer_id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          value: number
+        }
+        Insert: {
+          bidding_enabled?: boolean | null
+          brand: string
+          category: string
+          created_at?: string | null
+          description?: string | null
+          expiration?: string | null
+          id?: string
+          image_url?: string | null
+          impressions?: number | null
+          max_uses?: number | null
+          min_purchase?: number | null
+          redemptions?: number | null
+          retailer_id: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          value: number
+        }
+        Update: {
+          bidding_enabled?: boolean | null
+          brand?: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          expiration?: string | null
+          id?: string
+          image_url?: string | null
+          impressions?: number | null
+          max_uses?: number | null
+          min_purchase?: number | null
+          redemptions?: number | null
+          retailer_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_segments: {
         Row: {
           avg_basket_value: number | null

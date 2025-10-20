@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { BarChart3, Zap, DollarSign, Home, Download } from "lucide-react";
+import { BarChart3, Zap, DollarSign, Home, Download, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -165,6 +165,10 @@ const GrocerDashboard = () => {
           <Link to="/grocer-dashboard/flash-promo" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
             <Zap className="w-5 h-5" />
             Create Flash Promo
+          </Link>
+          <Link to="/grocer-dashboard/coupons" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
+            <Gift className="w-5 h-5" />
+            Manage Coupons
           </Link>
           <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
             <DollarSign className="w-5 h-5" />

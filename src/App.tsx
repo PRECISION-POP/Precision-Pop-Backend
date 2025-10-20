@@ -10,6 +10,7 @@ import BrowseSegments from "./pages/BrowseSegments";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetails from "./pages/CampaignDetails";
 import GrocerDashboard from "./pages/GrocerDashboard";
+import CouponManager from "./pages/grocer-dashboard/CouponManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/brand-dashboard/create-campaign" element={<CreateCampaign />} />
           <Route path="/brand-dashboard/campaign/:campaignId" element={<CampaignDetails />} />
           <Route path="/grocer-dashboard/*" element={<GrocerDashboard />} />
+          <Route path="/grocer-dashboard/coupons" element={<CouponManager />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
