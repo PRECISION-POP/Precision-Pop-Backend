@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ChefHat, Target, Search } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChefHat, Target, Search, AlertTriangle, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const RecipeBidding = () => {
@@ -16,6 +17,7 @@ const RecipeBidding = () => {
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const previousHighestBids = useRef<Record<string, { amount: number; brand: string }>>({});
   
   const [bidForm, setBidForm] = useState({
     product_name: "",
@@ -25,6 +27,23 @@ const RecipeBidding = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Real-time subscription for ingredient bid updates
+    const subscription = supabase
+      .channel('ingredient_bids_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ingredient_bids' },
+        (payload) => {
+          console.log('Ingredient bid changed:', payload);
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const fetchData = async () => {
@@ -39,7 +58,8 @@ const RecipeBidding = () => {
           bid_amount,
           placements_delivered,
           accepted,
-          status
+          status,
+          daily_budget
         )
       `)
       .order("avg_weekly_imports", { ascending: false });
@@ -51,6 +71,34 @@ const RecipeBidding = () => {
         ingredient_categories(name, parent_category, avg_weekly_imports)
       `)
       .eq("brand_id", "dev-brand-001");
+
+    // Check for outbid scenarios
+    ingredientData?.forEach((ingredient) => {
+      const highestBid = ingredient.ingredient_bids?.reduce((max: any, bid: any) => 
+        bid.bid_amount > (max?.bid_amount || 0) ? bid : max, null);
+      
+      const myBid = ingredient.ingredient_bids?.find((b: any) => b.brand_id === "dev-brand-001");
+      const prevHighest = previousHighestBids.current[ingredient.id];
+      
+      // Detect if we've been outbid
+      if (myBid && highestBid && highestBid.brand_id !== "dev-brand-001" && prevHighest) {
+        if (prevHighest.brand === "dev-brand-001" && highestBid.brand_id !== "dev-brand-001") {
+          toast({
+            title: "⚠️ You've been outbid!",
+            description: `${ingredient.name}: New highest bid is $${highestBid.bid_amount.toFixed(2)}`,
+            variant: "destructive"
+          });
+        }
+      }
+      
+      // Store current highest for next comparison
+      if (highestBid) {
+        previousHighestBids.current[ingredient.id] = {
+          amount: highestBid.bid_amount,
+          brand: highestBid.brand_id
+        };
+      }
+    });
 
     setIngredients(ingredientData || []);
     setMyBids(myBidData || []);
@@ -160,38 +208,61 @@ const RecipeBidding = () => {
             <h2 className="text-xl font-semibold">My Active Ingredient Bids</h2>
           </div>
           <div className="divide-y">
-            {myBids.map((bid) => (
-              <div key={bid.id} className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">{bid.product_name}</h3>
-                    <p className="text-sm text-gray-600">
-                      Ingredient: <strong>{bid.ingredient_categories.name}</strong> • ${bid.product_price.toFixed(2)}
-                    </p>
+            {myBids.map((bid) => {
+              const totalSpent = (bid.placements_delivered || 0) * bid.bid_amount;
+              const budgetUsed = bid.daily_budget ? (totalSpent / bid.daily_budget) : 0;
+              const acceptanceRate = bid.placements_delivered > 0 
+                ? Math.round((bid.accepted / bid.placements_delivered) * 100)
+                : 0;
+              
+              return (
+                <div key={bid.id} className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-lg">{bid.product_name}</h3>
+                      <p className="text-sm text-gray-600">
+                        Ingredient: <strong>{bid.ingredient_categories.name}</strong> • ${bid.product_price.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Budget Alert */}
+                  {bid.daily_budget && budgetUsed > 0.8 && (
+                    <Alert variant="destructive" className="mt-3">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        ⚠️ {Math.round(budgetUsed * 100)}% of daily budget used (${totalSpent.toFixed(2)} / ${bid.daily_budget})
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="grid grid-cols-5 gap-4 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-600">Placements</p>
+                      <p className="font-semibold">{bid.placements_delivered || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Accepted</p>
+                      <p className="font-semibold text-green-600">{bid.accepted || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Acceptance Rate</p>
+                      <p className="font-semibold text-green-600">{acceptanceRate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Total Spent</p>
+                      <p className="font-semibold">
+                        ${totalSpent.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Bid Amount</p>
+                      <p className="font-semibold text-primary">${bid.bid_amount.toFixed(2)}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-4 mt-3">
-                  <div>
-                    <p className="text-xs text-gray-600">Placements</p>
-                    <p className="font-semibold">{bid.placements_delivered || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Accepted</p>
-                    <p className="font-semibold text-green-600">{bid.accepted || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Total Spent</p>
-                    <p className="font-semibold">
-                      ${((bid.placements_delivered || 0) * bid.bid_amount).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Bid Amount</p>
-                    <p className="font-semibold text-primary">${bid.bid_amount.toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -229,7 +300,15 @@ const RecipeBidding = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-lg capitalize">{ingredient.name}</h3>
                         <Badge variant="secondary">{ingredient.parent_category}</Badge>
-                        {myBid && <Badge variant="default">You're Bidding</Badge>}
+                        {myBid && highestBid?.brand_id === "dev-brand-001" && (
+                          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                            <Trophy className="w-3 h-3 mr-1" />
+                            Winning Bid
+                          </Badge>
+                        )}
+                        {myBid && highestBid?.brand_id !== "dev-brand-001" && (
+                          <Badge variant="secondary">You're Bidding</Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">
                         Weekly imports: {ingredient.avg_weekly_imports || 0}

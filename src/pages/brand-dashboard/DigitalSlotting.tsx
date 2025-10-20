@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Target, AlertTriangle, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const DigitalSlotting = () => {
@@ -16,9 +17,27 @@ const DigitalSlotting = () => {
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState(0);
+  const previousHighestBids = useRef<Record<string, { amount: number; brand: string }>>({});
 
   useEffect(() => {
     fetchMarketplace();
+
+    // Real-time subscription for bid updates
+    const subscription = supabase
+      .channel('coupon_bids_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'coupon_bids' },
+        (payload) => {
+          console.log('Coupon bid changed:', payload);
+          fetchMarketplace();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const fetchMarketplace = async () => {
@@ -32,7 +51,8 @@ const DigitalSlotting = () => {
           brand_id,
           bid_amount,
           status,
-          impressions_delivered
+          impressions_delivered,
+          daily_budget
         )
       `)
       .eq("bidding_enabled", true)
@@ -48,6 +68,34 @@ const DigitalSlotting = () => {
       `)
       .eq("brand_id", "dev-brand-001")
       .eq("status", "active");
+
+    // Check for outbid scenarios
+    coupons?.forEach((coupon) => {
+      const highestBid = coupon.coupon_bids?.reduce((max: any, bid: any) => 
+        bid.bid_amount > (max?.bid_amount || 0) ? bid : max, null);
+      
+      const myBid = coupon.coupon_bids?.find((b: any) => b.brand_id === "dev-brand-001");
+      const prevHighest = previousHighestBids.current[coupon.id];
+      
+      // Detect if we've been outbid
+      if (myBid && highestBid && highestBid.brand_id !== "dev-brand-001" && prevHighest) {
+        if (prevHighest.brand === "dev-brand-001" && highestBid.brand_id !== "dev-brand-001") {
+          toast({
+            title: "⚠️ You've been outbid!",
+            description: `${coupon.title}: New highest bid is $${highestBid.bid_amount.toFixed(2)}`,
+            variant: "destructive"
+          });
+        }
+      }
+      
+      // Store current highest for next comparison
+      if (highestBid) {
+        previousHighestBids.current[coupon.id] = {
+          amount: highestBid.bid_amount,
+          brand: highestBid.brand_id
+        };
+      }
+    });
 
     setAvailableSlots(coupons || []);
     setMyBids(bids || []);
@@ -144,47 +192,62 @@ const DigitalSlotting = () => {
             <h2 className="text-xl font-semibold">My Active Bids</h2>
           </div>
           <div className="divide-y">
-            {myBids.map((bid) => (
-              <div key={bid.id} className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold">{bid.coupons.title}</h3>
-                    <p className="text-sm text-gray-600">
-                      {bid.coupons.brand} • {bid.coupons.category}
-                    </p>
+            {myBids.map((bid) => {
+              const totalSpent = (bid.impressions_delivered || 0) * bid.bid_amount;
+              const budgetUsed = bid.daily_budget ? (totalSpent / bid.daily_budget) : 0;
+              
+              return (
+                <div key={bid.id} className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold">{bid.coupons.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        {bid.coupons.brand} • {bid.coupons.category}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">${bid.bid_amount.toFixed(2)} / impression</p>
+                      <p className="text-sm text-gray-600">
+                        {bid.impressions_delivered || 0} impressions delivered
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-primary">${bid.bid_amount.toFixed(2)} / impression</p>
-                    <p className="text-sm text-gray-600">
-                      {bid.impressions_delivered || 0} impressions delivered
-                    </p>
+                  
+                  {/* Budget Alert */}
+                  {bid.daily_budget && budgetUsed > 0.8 && (
+                    <Alert variant="destructive" className="mt-3">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        ⚠️ {Math.round(budgetUsed * 100)}% of daily budget used (${totalSpent.toFixed(2)} / ${bid.daily_budget})
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="mt-3 grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-600">Total Spent</p>
+                      <p className="font-semibold">
+                        ${totalSpent.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Conversions</p>
+                      <p className="font-semibold text-green-600">
+                        {bid.conversions_delivered || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">CPA</p>
+                      <p className="font-semibold">
+                        ${bid.conversions_delivered > 0
+                          ? (totalSpent / bid.conversions_delivered).toFixed(2)
+                          : '0.00'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="mt-3 grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-600">Total Spent</p>
-                    <p className="font-semibold">
-                      ${((bid.impressions_delivered || 0) * bid.bid_amount).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Conversions</p>
-                    <p className="font-semibold text-green-600">
-                      {bid.conversions_delivered || 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">CPA</p>
-                    <p className="font-semibold">
-                      ${bid.conversions_delivered > 0
-                        ? (((bid.impressions_delivered || 0) * bid.bid_amount) / bid.conversions_delivered).toFixed(2)
-                        : '0.00'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -219,8 +282,14 @@ const DigitalSlotting = () => {
                       </p>
                     </div>
                     <div className="flex gap-2 items-center">
-                      {myBid && (
-                        <Badge variant="default">Your Bid: ${myBid.bid_amount.toFixed(2)}</Badge>
+                      {myBid && highestBid?.brand_id === "dev-brand-001" && (
+                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                          <Trophy className="w-3 h-3 mr-1" />
+                          Winning Bid
+                        </Badge>
+                      )}
+                      {myBid && highestBid?.brand_id !== "dev-brand-001" && (
+                        <Badge variant="secondary">Your Bid: ${myBid.bid_amount.toFixed(2)}</Badge>
                       )}
                       <Button
                         onClick={() => openBidDialog(coupon)}
