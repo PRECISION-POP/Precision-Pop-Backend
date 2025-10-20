@@ -172,15 +172,7 @@ export type Database = {
           target_segments?: string[] | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "campaigns_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "brands"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       check_ins: {
         Row: {
