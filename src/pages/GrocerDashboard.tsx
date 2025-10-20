@@ -18,6 +18,7 @@ const GrocerDashboard = () => {
     activePromos: 0,
     todayRevenue: 0
   });
+  const [couponBiddingRevenue, setCouponBiddingRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
 
@@ -121,6 +122,15 @@ const GrocerDashboard = () => {
       .order("bid_amount", { ascending: false })
       .limit(3);
 
+    // Fetch coupon bidding revenue
+    const { data: couponBidRevenue } = await supabase
+      .from("coupon_bids")
+      .select("bid_amount, impressions_delivered")
+      .eq("status", "active");
+
+    const couponRevenue = couponBidRevenue?.reduce((sum, bid) => 
+      sum + (bid.bid_amount * bid.impressions_delivered), 0) || 0;
+
     const todayCheckInCount = checkIns?.length || 0;
     const campaignsWithRevenue = campaigns?.map((c: any) => ({
       ...c,
@@ -136,6 +146,7 @@ const GrocerDashboard = () => {
       todayRevenue: revenue
     });
 
+    setCouponBiddingRevenue(couponRevenue);
     setFlashPromos(promos || []);
     setBrandCampaigns(campaignsWithRevenue);
     setLoading(false);
@@ -200,7 +211,7 @@ const GrocerDashboard = () => {
           </Select>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-sm text-gray-600 mb-2">Check-ins</p>
             <p className="text-3xl font-bold text-gray-900">{stats.todayCheckIns}</p>
@@ -212,6 +223,11 @@ const GrocerDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-sm text-gray-600 mb-2">Media Revenue</p>
             <p className="text-3xl font-bold text-green-600">${stats.todayRevenue.toFixed(2)}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow">
+            <p className="text-sm text-gray-600 mb-2">Coupon Bidding Revenue</p>
+            <p className="text-3xl font-bold text-green-600">${couponBiddingRevenue.toFixed(2)}</p>
+            <p className="text-xs text-gray-500 mt-1">From brand bids</p>
           </div>
         </div>
 

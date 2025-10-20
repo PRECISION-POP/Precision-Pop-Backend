@@ -9,8 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, DollarSign, Eye, Gift } from "lucide-react";
+import { Plus, Trash2, DollarSign, Eye, Gift, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+// Brand name mapping for display
+const brandNames: Record<string, string> = {
+  'dev-brand-001': 'Your Test Brand',
+  'dev-brand-002': 'Horizon Organic',
+  'dev-brand-003': 'Organic Valley',
+};
 
 interface Coupon {
   id: string;
@@ -67,16 +74,8 @@ const CouponManager = () => {
 
   const fetchCoupons = async () => {
     setLoading(true);
-    const retailerId = localStorage.getItem('GOD_MODE') === 'true' ? 'dev-retailer-001' : null;
-    
-    if (!retailerId) {
-      toast({
-        title: "Error",
-        description: "Retailer ID not found",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Use hardcoded retailer_id like brand dashboard
+    const retailerId = 'dev-retailer-001';
 
     const { data, error } = await supabase
       .from("coupons")
@@ -118,16 +117,8 @@ const CouponManager = () => {
   };
 
   const handleCreateCoupon = async () => {
-    const retailerId = localStorage.getItem('GOD_MODE') === 'true' ? 'dev-retailer-001' : null;
-    
-    if (!retailerId) {
-      toast({
-        title: "Error",
-        description: "Retailer ID not found",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Use hardcoded retailer_id
+    const retailerId = 'dev-retailer-001';
 
     const { error } = await supabase.from("coupons").insert([
       {
@@ -218,6 +209,14 @@ const CouponManager = () => {
     }, 0);
   };
 
+  const importFromHEB = async () => {
+    toast({
+      title: "Feature Coming Soon",
+      description: "HEB.com coupon scraper in development",
+    });
+    // TODO: Implement web scraping in future
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -237,13 +236,14 @@ const CouponManager = () => {
             </p>
           </div>
 
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Coupon
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Coupon
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create New Coupon</DialogTitle>
@@ -365,9 +365,15 @@ const CouponManager = () => {
               </div>
             </DialogContent>
           </Dialog>
+          
+          <Button variant="outline" onClick={importFromHEB}>
+            <Download className="w-4 h-4 mr-2" />
+            Import from HEB.com
+          </Button>
         </div>
+      </div>
 
-        {coupons.length === 0 ? (
+      {coupons.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Gift className="w-12 h-12 text-muted-foreground mb-4" />
@@ -480,7 +486,9 @@ const CouponManager = () => {
                               className="flex items-center justify-between p-3 bg-muted rounded-lg"
                             >
                               <div>
-                                <p className="font-medium">{bid.brand_id}</p>
+                                <p className="font-medium">
+                                  {brandNames[bid.brand_id] || bid.brand_id}
+                                </p>
                                 <p className="text-sm text-muted-foreground">
                                   Bid: ${bid.bid_amount.toFixed(4)} per impression
                                 </p>

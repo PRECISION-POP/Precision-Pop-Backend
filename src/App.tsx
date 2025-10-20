@@ -32,8 +32,10 @@ const App = () => (
           <Route path="/brand-dashboard/campaign/:campaignId" element={<CampaignDetails />} />
           <Route path="/brand-dashboard/digital-slotting" element={<DigitalSlotting />} />
           <Route path="/brand-dashboard/recipe-bidding" element={<RecipeBidding />} />
-          <Route path="/grocer-dashboard/*" element={<GrocerDashboard />} />
+          
+          {/* Grocer Dashboard Routes - SPECIFIC ROUTES FIRST! */}
           <Route path="/grocer-dashboard/coupons" element={<CouponManager />} />
+          <Route path="/grocer-dashboard" element={<GrocerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
