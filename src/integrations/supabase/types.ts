@@ -527,6 +527,156 @@ export type Database = {
           },
         ]
       }
+      ingredient_bids: {
+        Row: {
+          bid_amount: number
+          bid_type: string | null
+          brand_id: string
+          category_id: string | null
+          created_at: string | null
+          id: string
+          impressions_delivered: number | null
+          ingredient_keyword: string
+          product_image: string | null
+          product_name: string
+          product_price: number | null
+          status: string | null
+          swaps_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          bid_amount: number
+          bid_type?: string | null
+          brand_id: string
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          impressions_delivered?: number | null
+          ingredient_keyword: string
+          product_image?: string | null
+          product_name: string
+          product_price?: number | null
+          status?: string | null
+          swaps_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          bid_amount?: number
+          bid_type?: string | null
+          brand_id?: string
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          impressions_delivered?: number | null
+          ingredient_keyword?: string
+          product_image?: string | null
+          product_name?: string
+          product_price?: number | null
+          status?: string | null
+          swaps_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_bids_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_bids_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredient_categories: {
+        Row: {
+          avg_monthly_searches: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          avg_monthly_searches?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          avg_monthly_searches?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      ingredient_placements: {
+        Row: {
+          created_at: string | null
+          id: string
+          impressions: number | null
+          ingredient: string
+          is_sponsored: boolean | null
+          product_image: string | null
+          product_name: string
+          product_price: number | null
+          recipe_import_id: string
+          swapped_to_product: string | null
+          user_swapped: boolean | null
+          winning_bid_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          impressions?: number | null
+          ingredient: string
+          is_sponsored?: boolean | null
+          product_image?: string | null
+          product_name: string
+          product_price?: number | null
+          recipe_import_id: string
+          swapped_to_product?: string | null
+          user_swapped?: boolean | null
+          winning_bid_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          impressions?: number | null
+          ingredient?: string
+          is_sponsored?: boolean | null
+          product_image?: string | null
+          product_name?: string
+          product_price?: number | null
+          recipe_import_id?: string
+          swapped_to_product?: string | null
+          user_swapped?: boolean | null
+          winning_bid_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_placements_recipe_import_id_fkey"
+            columns: ["recipe_import_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_placements_winning_bid_id_fkey"
+            columns: ["winning_bid_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_bids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interactions: {
         Row: {
           campaign_id: string | null
@@ -911,6 +1061,50 @@ export type Database = {
             columns: ["flash_promo_id"]
             isOneToOne: false
             referencedRelation: "flash_promos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_imports: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          ingredients: Json
+          parsed_at: string | null
+          recipe_image: string | null
+          recipe_name: string | null
+          recipe_url: string | null
+          retailer_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          ingredients?: Json
+          parsed_at?: string | null
+          recipe_image?: string | null
+          recipe_name?: string | null
+          recipe_url?: string | null
+          retailer_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          ingredients?: Json
+          parsed_at?: string | null
+          recipe_image?: string | null
+          recipe_name?: string | null
+          recipe_url?: string | null
+          retailer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_imports_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
             referencedColumns: ["id"]
           },
         ]
