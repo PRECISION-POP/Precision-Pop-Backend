@@ -122,8 +122,7 @@ const BrandDashboard = () => {
 
   return (
     <BrandDashboardLayout>
-      {/* Main Content */}
-      <main className="flex-1 bg-gray-50 p-8">
+      <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Campaign Overview</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -211,7 +210,7 @@ const BrandDashboard = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </BrandDashboardLayout>
   );
 };
