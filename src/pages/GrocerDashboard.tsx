@@ -32,38 +32,10 @@ const GrocerDashboard = () => {
   }, [retailerId, timeRange]);
 
   const checkAuth = async () => {
-    // DEV MODE: Bypass auth for testing
-    const devMode = localStorage.getItem('GOD_MODE') === 'true';
-    if (devMode) {
-      setRetailerId('dev-retailer-001');
-      setStoreName('Dev Store (God Mode)');
-      console.log('🔓 GOD MODE: Grocer Dashboard - Using dev retailer ID');
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("retailers")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .single();
-
-    if (error || !data) {
-      toast({
-        title: "Error",
-        description: "Retailer account not found",
-        variant: "destructive",
-      });
-      navigate("/auth");
-    } else {
-      setRetailerId(data.id);
-      setStoreName(data.name);
-    }
+    // 🔓 GOD MODE: Auth disabled for development
+    setRetailerId('dev-retailer-001');
+    setStoreName('Dev Store');
+    console.log('🔓 GOD MODE: Grocer Dashboard - Auth bypassed');
   };
 
   const getStartDate = () => {
