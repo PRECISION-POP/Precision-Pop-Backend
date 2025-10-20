@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Target, AlertTriangle, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import BidAnalyticsChart from "@/components/BidAnalyticsChart";
 
 const DigitalSlotting = () => {
   const { toast } = useToast();
@@ -17,26 +18,50 @@ const DigitalSlotting = () => {
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState(0);
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
   const previousHighestBids = useRef<Record<string, { amount: number; brand: string }>>({});
 
   useEffect(() => {
+    console.log('💡 DigitalSlotting component mounted - fetching initial data');
     fetchMarketplace();
+    generateAnalytics();
 
     // Real-time subscription for bid updates
-    const subscription = supabase
+    console.log('🔌 Setting up realtime subscriptions...');
+    const bidsChannel = supabase
       .channel('coupon_bids_changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'coupon_bids' },
         (payload) => {
-          console.log('Coupon bid changed:', payload);
+          console.log('🔔 Real-time: Coupon bid changed!', payload);
+          fetchMarketplace();
+          generateAnalytics();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Coupon bids subscription status:', status);
+      });
+
+    // Subscribe to coupons table changes too
+    const couponsChannel = supabase
+      .channel('coupons_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'coupons' },
+        (payload) => {
+          console.log('🔔 Real-time: Coupon changed!', payload);
           fetchMarketplace();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Coupons subscription status:', status);
+      });
 
     return () => {
-      supabase.removeChannel(subscription);
+      console.log('🔌 Cleaning up realtime subscriptions');
+      supabase.removeChannel(bidsChannel);
+      supabase.removeChannel(couponsChannel);
     };
   }, []);
 
@@ -100,6 +125,26 @@ const DigitalSlotting = () => {
     setAvailableSlots(coupons || []);
     setMyBids(bids || []);
     setLoading(false);
+  };
+
+  const generateAnalytics = () => {
+    // Generate mock analytics data for the last 7 days
+    const data = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      data.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        impressions: Math.floor(Math.random() * 100) + 50,
+        clicks: Math.floor(Math.random() * 20) + 5,
+        conversions: Math.floor(Math.random() * 5) + 1,
+      });
+    }
+    
+    setAnalyticsData(data);
   };
 
   const placeBid = async () => {
@@ -185,6 +230,13 @@ const DigitalSlotting = () => {
         </div>
       </div>
 
+      {/* Bid Analytics Chart */}
+      {myBids.length > 0 && (
+        <div className="mb-8">
+          <BidAnalyticsChart data={analyticsData} />
+        </div>
+      )}
+
       {/* My Active Bids */}
       {myBids.length > 0 && (
         <div className="bg-white rounded-lg shadow mb-8">
@@ -194,7 +246,11 @@ const DigitalSlotting = () => {
           <div className="divide-y">
             {myBids.map((bid) => {
               const totalSpent = (bid.impressions_delivered || 0) * bid.bid_amount;
-              const budgetUsed = bid.daily_budget ? (totalSpent / bid.daily_budget) : 0;
+              const dailySpend = bid.daily_budget || 0;
+              const budgetUsed = dailySpend > 0 ? (totalSpent / dailySpend) : 0;
+              const burnRate = bid.impressions_delivered > 0 
+                ? totalSpent / Math.max(1, Math.ceil((new Date().getTime() - new Date(bid.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                : 0;
               
               return (
                 <div key={bid.id} className="p-4">
@@ -213,12 +269,40 @@ const DigitalSlotting = () => {
                     </div>
                   </div>
                   
+                  {/* Budget Tracking */}
+                  {dailySpend > 0 && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Daily Budget Tracking</span>
+                        <span className="text-sm text-gray-600">
+                          ${totalSpent.toFixed(2)} / ${dailySpend.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            budgetUsed >= 1 ? 'bg-red-500' : 
+                            budgetUsed >= 0.8 ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(budgetUsed * 100, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-gray-600">
+                        <span>Burn rate: ${burnRate.toFixed(2)}/day</span>
+                        <span>{Math.round(budgetUsed * 100)}% used</span>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Budget Alert */}
-                  {bid.daily_budget && budgetUsed > 0.8 && (
+                  {dailySpend > 0 && budgetUsed > 0.8 && (
                     <Alert variant="destructive" className="mt-3">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        ⚠️ {Math.round(budgetUsed * 100)}% of daily budget used (${totalSpent.toFixed(2)} / ${bid.daily_budget})
+                        {budgetUsed >= 1 
+                          ? '🚨 Daily budget exceeded! Bid may be paused.' 
+                          : `⚠️ ${Math.round(budgetUsed * 100)}% of daily budget used`}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -249,6 +333,15 @@ const DigitalSlotting = () => {
               );
             })}
           </div>
+        </div>
+      )}
+      
+      {/* Empty state for no bids */}
+      {myBids.length === 0 && !loading && (
+        <div className="bg-white rounded-lg shadow mb-8 p-12 text-center">
+          <Target className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Bids</h3>
+          <p className="text-gray-600">Place your first bid on a coupon slot below to start reaching customers.</p>
         </div>
       )}
 

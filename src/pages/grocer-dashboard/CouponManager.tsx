@@ -69,7 +69,47 @@ const CouponManager = () => {
   });
 
   useEffect(() => {
+    console.log('💡 CouponManager component mounted - fetching initial data');
     fetchCoupons();
+
+    // Real-time subscription for coupon and bid updates
+    console.log('🔌 Setting up realtime subscriptions...');
+    const couponsChannel = supabase
+      .channel('coupon_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'coupons' },
+        (payload) => {
+          console.log('🔔 Real-time: Coupon changed!', payload);
+          fetchCoupons();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Coupons subscription status:', status);
+      });
+
+    const bidsChannel = supabase
+      .channel('coupon_bid_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'coupon_bids' },
+        (payload) => {
+          console.log('🔔 Real-time: Coupon bid changed!', payload);
+          // Refetch bids for the affected coupon
+          if (payload.new && 'coupon_id' in payload.new) {
+            fetchCouponBids(payload.new.coupon_id as string);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Coupon bids subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up realtime subscriptions');
+      supabase.removeChannel(couponsChannel);
+      supabase.removeChannel(bidsChannel);
+    };
   }, []);
 
   const fetchCoupons = async () => {
