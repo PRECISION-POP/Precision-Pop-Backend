@@ -4,21 +4,40 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, DollarSign, Target, Users, TrendingUp, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BrandDashboardLayout from "@/components/BrandDashboardLayout";
+
+// Demo segments for presentation
+const DEMO_SEGMENTS = [
+  "Health Conscious Shoppers",
+  "Organic Buyers",
+  "Family Households", 
+  "Budget Conscious",
+  "Premium Buyers",
+  "Competitor Brand Loyalists",
+  "Frequent Dairy Buyers",
+  "Weekend Shoppers"
+];
+
+// Demo stores for presentation
+const DEMO_STORES = [
+  { id: "store-1", name: "HEB Mueller", retailer: "HEB" },
+  { id: "store-2", name: "HEB Lakeline", retailer: "HEB" },
+  { id: "store-3", name: "HEB Downtown", retailer: "HEB" },
+  { id: "store-4", name: "Whole Foods Domain", retailer: "Whole Foods" }
+];
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const [brandId, setBrandId] = useState<string | null>(null);
+  const [brandId, setBrandId] = useState<string | null>('dev-brand-001');
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [availableSegments, setAvailableSegments] = useState<string[]>([]);
-  const [availableStores, setAvailableStores] = useState<Array<{id: string, name: string, retailer: string}>>([]);
+  const [availableSegments, setAvailableSegments] = useState<string[]>(DEMO_SEGMENTS);
+  const [availableStores, setAvailableStores] = useState(DEMO_STORES);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
@@ -37,399 +56,309 @@ const CreateCampaign = () => {
   });
 
   useEffect(() => {
-    fetchBrandId();
-    fetchSegments();
-    fetchStores();
+    // 🔓 DEMO MODE: Pre-configured
+    console.log('🔓 DEMO MODE: CreateCampaign loaded');
   }, []);
 
-  const fetchStores = async () => {
-    const { data } = await supabase
-      .from("stores")
-      .select(`
-        id,
-        name,
-        retailers(name)
-      `)
-      .order("name");
-    
-    const formattedStores = data?.map(store => ({
-      id: store.id,
-      name: store.name,
-      retailer: (store.retailers as any)?.name || "Unknown"
-    })) || [];
-    
-    setAvailableStores(formattedStores);
-  };
-
-  const fetchBrandId = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("brands")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (error || !data) {
-      toast({
-        title: "Error",
-        description: "Brand account not found",
-        variant: "destructive",
-      });
-      navigate("/auth");
-    } else {
-      setBrandId(data.id);
-    }
-  };
-
-  const fetchSegments = async () => {
-    const { data } = await supabase
-      .from("customer_segments")
-      .select("name")
-      .order("customer_count", { ascending: false });
-    
-    setAvailableSegments(data?.map(s => s.name) || []);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `campaign-creatives/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('campaign-assets')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
-    } else {
-      const { data } = supabase.storage.from('campaign-assets').getPublicUrl(filePath);
-      setFormData({ ...formData, creative_url: data.publicUrl });
-      toast({ title: "Success", description: "Image uploaded successfully" });
-    }
-
-    setUploading(false);
-  };
+  // Calculate estimated metrics for preview
+  const estimatedImpressions = formData.budget_total && formData.bid_amount 
+    ? Math.floor((parseFloat(formData.budget_total) / parseFloat(formData.bid_amount)) * 1000)
+    : 0;
+  
+  const estimatedReach = Math.floor(estimatedImpressions * 0.65); // Assume 65% unique reach
+  const estimatedConversions = Math.floor(estimatedImpressions * 0.032); // 3.2% conversion rate
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!brandId) return;
-
-    // Validate date range
-    if (formData.end_date <= formData.start_date) {
-      toast({
-        title: "Error",
-        description: "End date must be after start date",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
-    // STEP 1: Create campaign
-    const { data: campaign, error: campaignError } = await supabase
-      .from("campaigns")
-      .insert([{
-        brand_id: brandId,
-        name: formData.name,
-        budget_total: parseFloat(formData.budget_total),
-        bid_amount: parseFloat(formData.bid_amount),
-        bid_type: formData.bid_type,
-        target_segments: formData.target_segments,
-        discount_value: parseFloat(formData.discount_value),
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        creative_url: formData.creative_url,
-        daily_budget_cap: formData.daily_budget_cap ? parseFloat(formData.daily_budget_cap) : null,
-        status: "draft",
-      }])
-      .select()
-      .single();
-
-    if (campaignError) {
+    // Demo: Just show success
+    setTimeout(() => {
       toast({
-        title: "Error",
-        description: campaignError.message,
-        variant: "destructive",
+        title: "✅ Campaign Created!",
+        description: `"${formData.name}" is now in review`,
       });
+      navigate("/brand-dashboard");
       setLoading(false);
-      return;
-    }
-
-    // STEP 2: Create the actual offer that shoppers will see
-    const { error: offerError } = await supabase
-      .from("offers")
-      .insert([{
-        campaign_id: campaign.id,
-        type: "campaign",
-        product_name: formData.product_name,
-        sku: formData.sku,
-        discount_value: parseFloat(formData.discount_value),
-        image_url: formData.creative_url,
-        valid_until: formData.end_date,
-      }]);
-
-    if (offerError) {
-      // Rollback campaign if offer creation fails
-      await supabase.from("campaigns").delete().eq("id", campaign.id);
-      toast({
-        title: "Error",
-        description: "Failed to create offer: " + offerError.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    toast({
-      title: "Success",
-      description: "Campaign and offer created successfully",
-    });
-    navigate("/brand-dashboard");
-    setLoading(false);
+    }, 1000);
   };
 
   return (
     <BrandDashboardLayout>
-      <div className="min-h-screen bg-background p-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold">Create New Campaign</h1>
-        </div>
+      <div className="min-h-screen bg-gray-50 p-6 tablet-padding">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-14 w-14">
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <div>
+              <h1 className="demo-heading text-gray-900 flex items-center gap-3">
+                <Zap className="w-8 h-8 text-purple-500" />
+                Create New Campaign
+              </h1>
+              <p className="text-lg text-gray-600 mt-1">Target your ideal customers with precision</p>
+            </div>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Campaign Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Campaign Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Spring Sale - Organic Milk"
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Form - 2/3 */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl">Campaign Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Campaign Name */}
+                    <div className="space-y-2">
+                      <Label className="text-base">Campaign Name</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Spring Sale - Organic Milk"
+                        className="h-14 text-lg"
+                        required
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="product_name">Product Name</Label>
-                  <Input
-                    id="product_name"
-                    value={formData.product_name}
-                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
-                    placeholder="e.g., Organic Whole Milk"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sku">SKU / Product Code</Label>
-                  <Input
-                    id="sku"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    placeholder="e.g., MILK-ORG-001"
-                    required
-                  />
-                </div>
-              </div>
+                    {/* Product Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-base">Product Name</Label>
+                        <Input
+                          value={formData.product_name}
+                          onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                          placeholder="e.g., Organic Whole Milk"
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-base">SKU</Label>
+                        <Input
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                          placeholder="e.g., MILK-ORG-001"
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="budget_total">Total Budget ($)</Label>
-                  <Input
-                    id="budget_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.budget_total}
-                    onChange={(e) => setFormData({ ...formData, budget_total: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="daily_budget_cap">Daily Budget Cap ($)</Label>
-                  <Input
-                    id="daily_budget_cap"
-                    type="number"
-                    step="0.01"
-                    value={formData.daily_budget_cap}
-                    onChange={(e) => setFormData({ ...formData, daily_budget_cap: e.target.value })}
-                  />
-                </div>
-              </div>
+                    {/* Targeting - Prominent for Demo */}
+                    <div className="p-5 bg-purple-50 rounded-xl border-2 border-purple-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="w-6 h-6 text-purple-600" />
+                        <Label className="text-lg font-semibold text-purple-900">Audience Targeting</Label>
+                      </div>
+                      <Select
+                        value={formData.target_segments[0] || ""}
+                        onValueChange={(value) => 
+                          setFormData({ ...formData, target_segments: [value] })
+                        }
+                      >
+                        <SelectTrigger className="h-14 text-lg">
+                          <SelectValue placeholder="Select target segment..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSegments.map(segment => (
+                            <SelectItem key={segment} value={segment} className="text-base py-3">
+                              {segment}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-purple-600 mt-2">
+                        Reach shoppers who match your ideal customer profile
+                      </p>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bid_type">Bid Type</Label>
-                  <Select
-                    value={formData.bid_type}
-                    onValueChange={(value: "cpm" | "cpc" | "cpa") => setFormData({ ...formData, bid_type: value })}
-                  >
-                    <SelectTrigger id="bid_type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cpm">CPM (Cost Per 1,000 Impressions)</SelectItem>
-                      <SelectItem value="cpc">CPC (Cost Per Click/Accept)</SelectItem>
-                      <SelectItem value="cpa">CPA (Cost Per Redemption)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bid_amount">Bid Amount ($)</Label>
-                  <Input
-                    id="bid_amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.bid_amount}
-                    onChange={(e) => setFormData({ ...formData, bid_amount: e.target.value })}
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Suggested: ${formData.bid_type === 'cpm' ? '5-15' : formData.bid_type === 'cpa' ? '1-3' : '0.25-0.75'}
-                  </p>
-                </div>
-              </div>
+                    {/* Budget & Bidding - Money Flow Section */}
+                    <div className="p-5 bg-green-50 rounded-xl border-2 border-green-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <DollarSign className="w-6 h-6 text-green-600" />
+                        <Label className="text-lg font-semibold text-green-900">Budget & Bidding</Label>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-2">
+                          <Label className="text-base">Total Budget ($)</Label>
+                          <Input
+                            type="number"
+                            step="100"
+                            value={formData.budget_total}
+                            onChange={(e) => setFormData({ ...formData, budget_total: e.target.value })}
+                            placeholder="5000"
+                            className="h-12 text-lg"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-base">Daily Cap ($)</Label>
+                          <Input
+                            type="number"
+                            step="10"
+                            value={formData.daily_budget_cap}
+                            onChange={(e) => setFormData({ ...formData, daily_budget_cap: e.target.value })}
+                            placeholder="200"
+                            className="h-12 text-lg"
+                          />
+                        </div>
+                      </div>
 
-              <div className="space-y-2">
-                <Label>Target Customer Segments</Label>
-                <Select
-                  value={formData.target_segments[0] || ""}
-                  onValueChange={(value) => 
-                    setFormData({ ...formData, target_segments: [value] })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select segment..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSegments.map(segment => (
-                      <SelectItem key={segment} value={segment}>
-                        {segment}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Or <Button variant="link" className="h-auto p-0" onClick={() => navigate("/brand-dashboard/segments")}>
-                    browse all segments
-                  </Button>
-                </p>
-              </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-base">Bid Type</Label>
+                          <Select
+                            value={formData.bid_type}
+                            onValueChange={(value: "cpm" | "cpc" | "cpa") => setFormData({ ...formData, bid_type: value })}
+                          >
+                            <SelectTrigger className="h-12 text-base">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cpm" className="text-base py-3">CPM (per 1,000 views)</SelectItem>
+                              <SelectItem value="cpc" className="text-base py-3">CPC (per click)</SelectItem>
+                              <SelectItem value="cpa" className="text-base py-3">CPA (per redemption)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-base">Bid Amount ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.50"
+                            value={formData.bid_amount}
+                            onChange={(e) => setFormData({ ...formData, bid_amount: e.target.value })}
+                            placeholder={formData.bid_type === 'cpm' ? '10.00' : '0.50'}
+                            className="h-12 text-lg"
+                            required
+                          />
+                          <p className="text-sm text-green-600">
+                            Suggested: ${formData.bid_type === 'cpm' ? '8-15' : formData.bid_type === 'cpa' ? '1-3' : '0.25-0.75'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <Label>Target Store Locations (Optional)</Label>
-                <Select
-                  value={selectedStores.length > 0 ? selectedStores[0] : "all"}
-                  onValueChange={(value) => {
-                    if (value === "all") {
-                      setSelectedStores([]);
-                    } else {
-                      setSelectedStores([value]);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All stores (recommended)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Stores (Maximum Reach)</SelectItem>
-                    {availableStores.map(store => (
-                      <SelectItem key={store.id} value={store.id}>
-                        {store.name} ({store.retailer})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  {selectedStores.length === 0 
-                    ? "Campaign will run in all participating stores" 
-                    : `Campaign will run in ${selectedStores.length} selected store(s)`
-                  }
-                </p>
-              </div>
+                    {/* Discount Value */}
+                    <div className="space-y-2">
+                      <Label className="text-base">Coupon Value ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.25"
+                        value={formData.discount_value}
+                        onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+                        placeholder="2.00"
+                        className="h-12 text-lg"
+                        required
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="discount_value">Discount Value ($)</Label>
-                <Input
-                  id="discount_value"
-                  type="number"
-                  step="0.01"
-                  value={formData.discount_value}
-                  onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                  required
-                />
-              </div>
+                    {/* Date Range */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-base">Start Date</Label>
+                        <Input
+                          type="datetime-local"
+                          value={formData.start_date}
+                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-base">End Date</Label>
+                        <Input
+                          type="datetime-local"
+                          value={formData.end_date}
+                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Start Date</Label>
-                  <Input
-                    id="start_date"
-                    type="datetime-local"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_date">End Date</Label>
-                  <Input
-                    id="end_date"
-                    type="datetime-local"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 pt-4">
+                      <Button type="button" variant="outline" onClick={() => navigate(-1)} className="h-14 px-6 text-lg">
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={loading} className="h-14 px-8 text-lg flex-1 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700">
+                        {loading ? "Creating..." : "Launch Campaign"}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="creative">Creative Asset (Image/Video)</Label>
-                <Input
-                  id="creative"
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={handleImageUpload}
-                  disabled={uploading}
-                />
-                {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
-                {formData.creative_url && (
-                  <div className="mt-2">
-                    <img src={formData.creative_url} alt="Preview" className="max-w-xs rounded border" />
+            {/* Preview Panel - 1/3 */}
+            <div className="lg:col-span-1">
+              <Card className="sticky top-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">Campaign Preview</CardTitle>
+                  <CardDescription>Estimated performance</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Estimated Metrics */}
+                  <div className="space-y-4 mb-6">
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                      <Users className="w-8 h-8 text-blue-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Est. Impressions</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {estimatedImpressions > 0 ? estimatedImpressions.toLocaleString() : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl">
+                      <Target className="w-8 h-8 text-purple-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Est. Unique Reach</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {estimatedReach > 0 ? estimatedReach.toLocaleString() : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl money-flow-card">
+                      <TrendingUp className="w-8 h-8 text-green-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Est. Conversions</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {estimatedConversions > 0 ? estimatedConversions.toLocaleString() : "—"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div className="flex gap-4">
-                <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading || !brandId}>
-                  {loading ? "Creating..." : "Create Campaign"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  {/* Money Flow Visual */}
+                  <div className="p-4 bg-gray-900 text-white rounded-xl">
+                    <p className="text-sm text-gray-400 mb-3">💰 Where Your Money Goes</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Platform Fee</span>
+                        <span className="text-cyan-400">15%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Retailer Revenue Share</span>
+                        <span className="text-purple-400">35%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Customer Savings</span>
+                        <span className="text-green-400">50%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
     </BrandDashboardLayout>
   );
 };

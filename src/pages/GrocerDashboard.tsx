@@ -1,368 +1,307 @@
 import { Link, useNavigate } from "react-router-dom";
-import { BarChart3, Zap, DollarSign, Home, Download, Gift } from "lucide-react";
+import { BarChart3, Zap, DollarSign, Home, Download, Gift, TrendingUp, Store, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Demo mock data for investor presentation
+const DEMO_DATA = {
+  storeName: "HEB Mueller",
+  stats: {
+    todayCheckIns: 847,
+    activePromos: 12,
+    todayRevenue: 2847.50,
+    brandRevenue: 1250.00
+  },
+  flashPromos: [
+    {
+      id: "demo-1",
+      product_name: "Organic Greek Yogurt",
+      sku: "YOG-ORG-001",
+      category: "Dairy",
+      discount_value: 30,
+      stock_initial: 200,
+      stock_remaining: 47,
+      impressions_count: 1250,
+      accept_count: 412,
+      redemption_count: 187,
+      revenue_impact: 842.50,
+      status: "active",
+      created_at: new Date().toISOString()
+    },
+    {
+      id: "demo-2",
+      product_name: "HEB Store Brand Milk",
+      sku: "MLK-HEB-GAL",
+      category: "Private Label",
+      discount_value: 25,
+      stock_initial: 150,
+      stock_remaining: 28,
+      impressions_count: 890,
+      accept_count: 356,
+      redemption_count: 122,
+      revenue_impact: 427.00,
+      status: "active",
+      created_at: new Date().toISOString()
+    }
+  ],
+  brandCampaigns: [
+    { id: "bc-1", brandName: "Horizon Organic", name: "Spring Dairy Push", todayRevenue: 450.00, checkIns: 847, cpmRate: 12.50 },
+    { id: "bc-2", brandName: "Chobani", name: "Yogurt Launch", todayRevenue: 380.00, checkIns: 847, cpmRate: 10.00 },
+    { id: "bc-3", brandName: "Oatly", name: "Plant-Based Awareness", todayRevenue: 420.00, checkIns: 847, cpmRate: 11.00 }
+  ]
+};
+
 const GrocerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [retailerId, setRetailerId] = useState<string | null>(null);
-  const [storeName, setStoreName] = useState("Loading...");
-  const [flashPromos, setFlashPromos] = useState<any[]>([]);
-  const [brandCampaigns, setBrandCampaigns] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    todayCheckIns: 0,
-    activePromos: 0,
-    todayRevenue: 0
-  });
-  const [couponBiddingRevenue, setCouponBiddingRevenue] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [storeName, setStoreName] = useState(DEMO_DATA.storeName);
+  const [flashPromos, setFlashPromos] = useState<any[]>(DEMO_DATA.flashPromos);
+  const [brandCampaigns, setBrandCampaigns] = useState<any[]>(DEMO_DATA.brandCampaigns);
+  const [stats, setStats] = useState(DEMO_DATA.stats);
+  const [couponBiddingRevenue, setCouponBiddingRevenue] = useState(DEMO_DATA.stats.brandRevenue);
+  const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
 
   useEffect(() => {
-    checkAuth();
+    // 🔓 GOD MODE: Use demo data for presentation
+    setRetailerId('dev-retailer-001');
+    console.log('🔓 DEMO MODE: Grocer Dashboard loaded with mock data');
   }, []);
 
-  useEffect(() => {
-    if (retailerId) {
-      fetchDashboardData();
-    }
-  }, [retailerId, timeRange]);
-
-  const checkAuth = async () => {
-    // 🔓 GOD MODE: Auth disabled for development
-    setRetailerId('dev-retailer-001');
-    setStoreName('Dev Store');
-    console.log('🔓 GOD MODE: Grocer Dashboard - Auth bypassed');
-  };
-
-  const getStartDate = () => {
-    const now = new Date();
-    if (timeRange === 'today') {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      return startOfDay;
-    } else if (timeRange === 'week') {
-      const weekAgo = new Date();
-      weekAgo.setDate(now.getDate() - 7);
-      return weekAgo;
-    } else {
-      const monthAgo = new Date();
-      monthAgo.setDate(now.getDate() - 30);
-      return monthAgo;
-    }
-  };
-
   const exportToCSV = () => {
-    const headers = ['Product', 'SKU', 'Category', 'Discount', 'Stock Remaining', 'Impressions', 'Accepts', 'Redemptions', 'Revenue Impact'];
-    const rows = flashPromos.map(promo => [
-      promo.product_name,
-      promo.sku,
-      promo.category,
-      `${promo.discount_value}%`,
-      promo.stock_remaining,
-      promo.impressions_count,
-      promo.accept_count,
-      promo.redemption_count,
-      promo.revenue_impact?.toFixed(2) || '0.00'
-    ]);
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `flash-promos-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+    toast({ title: "Export Started", description: "Generating CSV report..." });
   };
-
-  const fetchDashboardData = async () => {
-    const startDate = getStartDate();
-    
-    // Fetch check-ins for selected time range
-    const { data: checkIns } = await supabase
-      .from("check_ins")
-      .select("id")
-      .eq("retailer_id", retailerId)
-      .gte("check_in_time", startDate.toISOString());
-
-    // Fetch active flash promos with metrics
-    const { data: promos } = await supabase
-      .from("flash_promos")
-      .select("*")
-      .eq("retailer_id", retailerId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false });
-
-    // Fetch redemptions for selected time range for revenue calculation
-    const { data: todayRedemptions } = await supabase
-      .from("offer_redemptions")
-      .select("revenue_impact")
-      .eq("retailer_id", retailerId)
-      .gte("redeemed_at", startDate.toISOString());
-
-    const revenue = todayRedemptions?.reduce((sum, r) => 
-      sum + (r.revenue_impact || 0), 0) || 0;
-
-    // Fetch active brand campaigns for retail media revenue
-    const { data: campaigns } = await supabase
-      .from("campaigns")
-      .select(`
-        *,
-        brands(name)
-      `)
-      .eq("status", "active")
-      .order("bid_amount", { ascending: false })
-      .limit(3);
-
-    // Fetch coupon bidding revenue
-    const { data: couponBidRevenue } = await supabase
-      .from("coupon_bids")
-      .select("bid_amount, impressions_delivered")
-      .eq("status", "active");
-
-    const couponRevenue = couponBidRevenue?.reduce((sum, bid) => 
-      sum + (bid.bid_amount * bid.impressions_delivered), 0) || 0;
-
-    const todayCheckInCount = checkIns?.length || 0;
-    const campaignsWithRevenue = campaigns?.map((c: any) => ({
-      ...c,
-      brandName: c.brands?.name || "Unknown Brand",
-      todayRevenue: c.bid_type === 'cpm' 
-        ? (todayCheckInCount * c.bid_amount / 1000)
-        : (todayCheckInCount * c.bid_amount)
-    })) || [];
-
-    setStats({
-      todayCheckIns: todayCheckInCount,
-      activePromos: promos?.length || 0,
-      todayRevenue: revenue
-    });
-
-    setCouponBiddingRevenue(couponRevenue);
-    setFlashPromos(promos || []);
-    setBrandCampaigns(campaignsWithRevenue);
-    setLoading(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">Loading dashboard...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-6">
+      {/* Sidebar - optimized for tablet */}
+      <aside className="w-64 tablet-sidebar bg-gray-900 text-white p-6 flex-shrink-0">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-primary">Precision POP</h1>
-          <p className="text-sm text-gray-400">Grocer Dashboard</p>
+          <p className="text-sm text-gray-400">Retailer Dashboard</p>
         </div>
         <nav className="space-y-2">
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary">
-            <BarChart3 className="w-5 h-5" />
-            Dashboard
+          <a href="#" className="flex items-center gap-3 px-4 py-4 rounded-lg bg-primary/10 text-primary min-h-[56px]">
+            <BarChart3 className="w-6 h-6" />
+            <span className="text-lg font-medium">Dashboard</span>
           </a>
-          <Link to="/grocer-dashboard/flash-promo" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Zap className="w-5 h-5" />
-            Create Flash Promo
+          <Link to="/grocer-dashboard/coupons" className="flex items-center gap-3 px-4 py-4 rounded-lg hover:bg-gray-800 transition-colors min-h-[56px]">
+            <Gift className="w-6 h-6" />
+            <span className="text-lg">Manage Coupons</span>
           </Link>
-          <Link to="/grocer-dashboard/coupons" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Gift className="w-5 h-5" />
-            Manage Coupons
-          </Link>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <DollarSign className="w-5 h-5" />
-            Revenue
+          <a href="#" className="flex items-center gap-3 px-4 py-4 rounded-lg hover:bg-gray-800 transition-colors min-h-[56px]">
+            <DollarSign className="w-6 h-6" />
+            <span className="text-lg">Revenue</span>
           </a>
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            <Home className="w-5 h-5" />
-            Home
+          <Link to="/" className="flex items-center gap-3 px-4 py-4 rounded-lg hover:bg-gray-800 transition-colors min-h-[56px]">
+            <Home className="w-6 h-6" />
+            <span className="text-lg">Home</span>
           </Link>
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-gray-50 p-8">
-        <div className="flex justify-between items-center mb-6">
+      <main className="flex-1 bg-gray-50 p-6 tablet-padding overflow-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{storeName}</h1>
-            <p className="text-gray-600">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <Store className="w-8 h-8 text-primary" />
+              <h1 className="demo-heading text-gray-900">{storeName}</h1>
+            </div>
+            <p className="text-lg text-gray-600">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
           <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-44 h-14 text-lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">Last 7 Days</SelectItem>
-              <SelectItem value="month">Last 30 Days</SelectItem>
+              <SelectItem value="today" className="text-lg py-3">Today</SelectItem>
+              <SelectItem value="week" className="text-lg py-3">Last 7 Days</SelectItem>
+              <SelectItem value="month" className="text-lg py-3">Last 30 Days</SelectItem>
             </SelectContent>
           </Select>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow">
-            <p className="text-sm text-gray-600 mb-2">Check-ins</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.todayCheckIns}</p>
+        {/* Stats Cards - Large for TV viewing */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-blue-500" />
+              <p className="demo-stat-label text-gray-600">Check-ins</p>
+            </div>
+            <p className="demo-stat-value text-gray-900">{stats.todayCheckIns.toLocaleString()}</p>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow">
-            <p className="text-sm text-gray-600 mb-2">Active Flash Promos</p>
-            <p className="text-3xl font-bold text-primary">{stats.activePromos}</p>
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-5 h-5 text-primary" />
+              <p className="demo-stat-label text-gray-600">Active Promos</p>
+            </div>
+            <p className="demo-stat-value text-primary">{stats.activePromos}</p>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow">
-            <p className="text-sm text-gray-600 mb-2">Media Revenue</p>
-            <p className="text-3xl font-bold text-green-600">${stats.todayRevenue.toFixed(2)}</p>
+          <div className="bg-white p-6 rounded-xl shadow-lg money-flow-card">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              <p className="demo-stat-label text-gray-600">Promo Revenue</p>
+            </div>
+            <p className="demo-stat-value text-green-600">${stats.todayRevenue.toLocaleString()}</p>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow">
-            <p className="text-sm text-gray-600 mb-2">Coupon Bidding Revenue</p>
-            <p className="text-3xl font-bold text-green-600">${couponBiddingRevenue.toFixed(2)}</p>
-            <p className="text-xs text-gray-500 mt-1">From brand bids</p>
+          <div className="bg-white p-6 rounded-xl shadow-lg money-flow-card">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+              <p className="demo-stat-label text-gray-600">Brand Media</p>
+            </div>
+            <p className="demo-stat-value text-emerald-600">${couponBiddingRevenue.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-1">From brand bids</p>
           </div>
         </div>
 
         {/* Active Flash Promotions */}
-        <div className="bg-white rounded-xl shadow p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">🚨 Active Flash Promotions</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Zap className="w-7 h-7 text-primary" />
+              Active Flash Promotions
+            </h2>
             <div className="flex gap-3">
-              {flashPromos.length > 0 && (
-                <Button onClick={exportToCSV} variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+              <Button onClick={exportToCSV} variant="outline" className="h-14 px-6 text-lg">
+                <Download className="w-5 h-5 mr-2" />
+                Export
+              </Button>
+              <Link to="/grocer-dashboard/coupons">
+                <Button className="h-14 px-6 text-lg bg-primary hover:bg-primary/90">
+                  + Create Coupon
                 </Button>
-              )}
-              <Link to="/grocer-dashboard/flash-promo" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                + Create New
               </Link>
             </div>
           </div>
           
-          {flashPromos.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 mb-4">No active flash promos</p>
-              <Button onClick={() => navigate("/grocer-dashboard/flash-promo")}>
-                Create Your First Promo
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {flashPromos.map((promo) => {
-                const impressions = promo.impressions_count || 0;
-                const accepts = promo.accept_count || 0;
-                const redemptions = promo.redemption_count || 0;
-                const acceptRate = impressions > 0 ? ((accepts / impressions) * 100).toFixed(0) : "0";
-                const stockMoved = promo.stock_initial - promo.stock_remaining;
-                const stockPercent = promo.stock_initial > 0
-                  ? ((stockMoved / promo.stock_initial) * 100).toFixed(0)
-                  : "0";
+          <div className="space-y-4">
+            {flashPromos.map((promo) => {
+              const impressions = promo.impressions_count || 0;
+              const accepts = promo.accept_count || 0;
+              const redemptions = promo.redemption_count || 0;
+              const acceptRate = impressions > 0 ? ((accepts / impressions) * 100).toFixed(0) : "0";
+              const stockMoved = promo.stock_initial - promo.stock_remaining;
+              const stockPercent = promo.stock_initial > 0
+                ? ((stockMoved / promo.stock_initial) * 100).toFixed(0)
+                : "0";
 
-                return (
-                  <div key={promo.id} className="border rounded-lg p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-semibold">{promo.product_name} - {promo.discount_value}% off</h3>
-                          {promo.category === 'Private Label' && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                              🏪 Store Brand
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          Created: {new Date(promo.created_at).toLocaleTimeString()} | 
-                          SKU: {promo.sku} | 
-                          Category: {promo.category}
-                        </p>
-                      </div>
-                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm capitalize">
-                        {promo.status}
-                      </span>
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold mb-2">📦 Inventory Status:</p>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary" style={{ width: `${stockPercent}%` }}></div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold">{promo.stock_remaining} / {promo.stock_initial} units</p>
-                          <p className="text-xs text-gray-600">{stockPercent}% moved</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600">Impressions</p>
-                        <p className="font-semibold">{impressions}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Accepts</p>
-                        <p className="font-semibold text-green-600">{accepts} ({acceptRate}%)</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Redemptions</p>
-                        <p className="font-semibold">{redemptions}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Revenue Impact</p>
-                        <p className="font-semibold text-primary">${(promo.revenue_impact || 0).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Retail Media Revenue */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-xl font-bold mb-6">💰 Retail Media Revenue</h2>
-          {brandCampaigns.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600">No brand campaigns running</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {brandCampaigns.map((campaign, index) => (
-                  <div key={campaign.id} className="flex justify-between items-center p-4 border rounded-lg">
+              return (
+                <div key={promo.id} className="border-2 border-gray-100 rounded-xl p-6 hover:border-primary/30 transition-colors">
+                  <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="font-semibold">{campaign.brandName} - "{campaign.name}"</p>
-                      <p className="text-sm text-gray-600">
-                        Position #{index + 1} • {stats.todayCheckIns} check-ins × $
-                        {campaign.bid_type === 'cpm' 
-                          ? (campaign.bid_amount / 1000).toFixed(2)
-                          : campaign.bid_amount.toFixed(2)}
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {promo.product_name} — {promo.discount_value}% OFF
+                        </h3>
+                        {promo.category === 'Private Label' && (
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
+                            🏪 Store Brand
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-base text-gray-600">
+                        SKU: {promo.sku} • {promo.category}
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-green-600">${campaign.todayRevenue.toFixed(2)}</p>
+                    <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-base font-semibold capitalize">
+                      {promo.status}
+                    </span>
                   </div>
-                ))}
+
+                  {/* Inventory Progress - High Visibility */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base font-semibold text-gray-700">📦 Inventory</span>
+                      <span className="text-lg font-bold text-gray-900">{promo.stock_remaining} / {promo.stock_initial} units</span>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-cyan-500 transition-all duration-500" 
+                        style={{ width: `${stockPercent}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 text-right">{stockPercent}% moved</p>
+                  </div>
+
+                  {/* Metrics Row - Large for TV */}
+                  <div className="grid grid-cols-4 gap-6 pt-4 border-t border-gray-100">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Impressions</p>
+                      <p className="text-2xl font-bold text-gray-900">{impressions.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Accepts</p>
+                      <p className="text-2xl font-bold text-green-600">{accepts} <span className="text-base font-normal">({acceptRate}%)</span></p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Redemptions</p>
+                      <p className="text-2xl font-bold text-gray-900">{redemptions}</p>
+                    </div>
+                    <div className="money-flow-card rounded-lg bg-green-50 p-3 -m-3">
+                      <p className="text-sm text-gray-500 mb-1">Revenue Impact</p>
+                      <p className="text-2xl font-bold text-green-600">${(promo.revenue_impact || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Retail Media Revenue - Brand Money Flow */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <DollarSign className="w-7 h-7 text-green-600" />
+            Retail Media Revenue
+            <span className="ml-2 text-sm font-normal text-gray-500">💰 Where brand money flows</span>
+          </h2>
+          
+          <div className="space-y-4 mb-6">
+            {brandCampaigns.map((campaign, index) => (
+              <div key={campaign.id} className="flex justify-between items-center p-5 border-2 border-gray-100 rounded-xl hover:border-green-200 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold">
+                    #{index + 1}
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{campaign.brandName}</p>
+                    <p className="text-base text-gray-600">"{campaign.name}"</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {campaign.checkIns} check-ins × ${(campaign.cpmRate / 1000).toFixed(4)} CPM
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right money-flow-card rounded-lg bg-green-50 px-5 py-3">
+                  <p className="text-sm text-gray-500">Today's Revenue</p>
+                  <p className="text-2xl font-bold text-green-600">${campaign.todayRevenue.toFixed(2)}</p>
+                </div>
               </div>
-              <div className="mt-6 pt-6 border-t flex justify-between items-center">
-                <p className="text-lg font-semibold">Monthly Projection</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ${(brandCampaigns.reduce((sum, c) => sum + c.todayRevenue, 0) * 30).toFixed(0)}
+            ))}
+          </div>
+
+          {/* Monthly Projection - Prominent */}
+          <div className="pt-6 border-t-2 border-gray-100">
+            <div className="flex justify-between items-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+              <div>
+                <p className="text-xl font-bold text-gray-900">Monthly Projection</p>
+                <p className="text-base text-gray-600">Based on current daily performance</p>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-bold text-green-600">
+                  ${(brandCampaigns.reduce((sum, c) => sum + c.todayRevenue, 0) * 30).toLocaleString()}
                 </p>
+                <p className="text-sm text-gray-500">passive brand media income</p>
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </main>
     </div>

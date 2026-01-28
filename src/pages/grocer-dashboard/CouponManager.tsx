@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,14 +10,76 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, DollarSign, Eye, Gift, Download } from "lucide-react";
+import { Plus, Trash2, DollarSign, Eye, Gift, ArrowLeft, TrendingUp, Store } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+// Demo mock data for investor presentation
+const DEMO_COUPONS = [
+  {
+    id: "demo-coup-1",
+    title: "$2 off Horizon Organic Milk",
+    description: "Save $2 on any Horizon Organic Milk 64oz or larger",
+    brand: "Horizon",
+    value: 2.00,
+    category: "Dairy",
+    image_url: "",
+    expiration: "2024-03-15",
+    min_purchase: 0,
+    max_uses: 500,
+    status: "active",
+    bidding_enabled: true,
+    impressions: 2847,
+    redemptions: 412
+  },
+  {
+    id: "demo-coup-2",
+    title: "$1.50 off Chobani Greek Yogurt",
+    description: "Save $1.50 on any Chobani 4-pack",
+    brand: "Chobani",
+    value: 1.50,
+    category: "Dairy",
+    image_url: "",
+    expiration: "2024-03-20",
+    min_purchase: 5,
+    max_uses: 300,
+    status: "active",
+    bidding_enabled: true,
+    impressions: 1892,
+    redemptions: 287
+  },
+  {
+    id: "demo-coup-3",
+    title: "BOGO HEB Brand Bread",
+    description: "Buy one get one free on HEB Bakery Bread",
+    brand: "HEB",
+    value: 3.49,
+    category: "Bakery",
+    image_url: "",
+    expiration: "2024-03-10",
+    min_purchase: 0,
+    max_uses: 200,
+    status: "active",
+    bidding_enabled: false,
+    impressions: 956,
+    redemptions: 178
+  }
+];
+
+const DEMO_BIDS = {
+  "demo-coup-1": [
+    { id: "bid-1", brand_id: "dev-brand-002", bid_amount: 0.015, impressions_delivered: 1423, conversions_delivered: 198 },
+    { id: "bid-2", brand_id: "dev-brand-003", bid_amount: 0.012, impressions_delivered: 890, conversions_delivered: 124 }
+  ],
+  "demo-coup-2": [
+    { id: "bid-3", brand_id: "dev-brand-001", bid_amount: 0.018, impressions_delivered: 1200, conversions_delivered: 156 }
+  ]
+};
 
 // Brand name mapping for display
 const brandNames: Record<string, string> = {
-  'dev-brand-001': 'Your Test Brand',
-  'dev-brand-002': 'Horizon Organic',
-  'dev-brand-003': 'Organic Valley',
+  'dev-brand-001': 'Horizon Organic',
+  'dev-brand-002': 'Organic Valley',
+  'dev-brand-003': 'Oatly',
 };
 
 interface Coupon {
@@ -42,17 +105,14 @@ interface CouponBid {
   bid_amount: number;
   impressions_delivered: number;
   conversions_delivered: number;
-  brands: {
-    name: string;
-  };
 }
 
 const CouponManager = () => {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [coupons, setCoupons] = useState<Coupon[]>(DEMO_COUPONS);
+  const [loading, setLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
-  const [couponBids, setCouponBids] = useState<Record<string, CouponBid[]>>({});
+  const [couponBids, setCouponBids] = useState<Record<string, CouponBid[]>>(DEMO_BIDS);
   const { toast } = useToast();
 
   const [newCoupon, setNewCoupon] = useState({
@@ -69,178 +129,63 @@ const CouponManager = () => {
   });
 
   useEffect(() => {
-    console.log('💡 CouponManager component mounted - fetching initial data');
-    fetchCoupons();
-
-    // Real-time subscription for coupon and bid updates
-    console.log('🔌 Setting up realtime subscriptions...');
-    const couponsChannel = supabase
-      .channel('coupon_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'coupons' },
-        (payload) => {
-          console.log('🔔 Real-time: Coupon changed!', payload);
-          fetchCoupons();
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Coupons subscription status:', status);
-      });
-
-    const bidsChannel = supabase
-      .channel('coupon_bid_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'coupon_bids' },
-        (payload) => {
-          console.log('🔔 Real-time: Coupon bid changed!', payload);
-          // Refetch bids for the affected coupon
-          if (payload.new && 'coupon_id' in payload.new) {
-            fetchCouponBids(payload.new.coupon_id as string);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Coupon bids subscription status:', status);
-      });
-
-    return () => {
-      console.log('🔌 Cleaning up realtime subscriptions');
-      supabase.removeChannel(couponsChannel);
-      supabase.removeChannel(bidsChannel);
-    };
+    // 🔓 DEMO MODE: Pre-loaded with mock data
+    console.log('🔓 DEMO MODE: CouponManager loaded with mock data');
   }, []);
 
-  const fetchCoupons = async () => {
-    setLoading(true);
-    // Use hardcoded retailer_id like brand dashboard
-    const retailerId = 'dev-retailer-001';
-
-    const { data, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .eq("retailer_id", retailerId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast({
-        title: "Error loading coupons",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setCoupons(data || []);
-      // Fetch bids for each coupon
-      data?.forEach(coupon => {
-        if (coupon.bidding_enabled) {
-          fetchCouponBids(coupon.id);
-        }
-      });
-    }
-    setLoading(false);
-  };
-
-  const fetchCouponBids = async (couponId: string) => {
-    const { data, error } = await supabase
-      .from("coupon_bids")
-      .select("*")
-      .eq("coupon_id", couponId)
-      .eq("status", "active");
-
-    if (!error && data) {
-      setCouponBids(prev => ({
-        ...prev,
-        [couponId]: data as any,
-      }));
-    }
-  };
-
   const handleCreateCoupon = async () => {
-    // Use hardcoded retailer_id
-    const retailerId = 'dev-retailer-001';
+    // Demo: Just add to local state
+    const newId = `demo-coup-${Date.now()}`;
+    const coupon: Coupon = {
+      id: newId,
+      title: newCoupon.title,
+      description: newCoupon.description,
+      brand: newCoupon.brand,
+      value: parseFloat(newCoupon.value),
+      category: newCoupon.category,
+      image_url: newCoupon.image_url,
+      expiration: newCoupon.expiration,
+      min_purchase: parseFloat(newCoupon.min_purchase),
+      max_uses: parseInt(newCoupon.max_uses),
+      status: "active",
+      bidding_enabled: newCoupon.bidding_enabled,
+      impressions: 0,
+      redemptions: 0
+    };
 
-    const { error } = await supabase.from("coupons").insert([
-      {
-        retailer_id: retailerId,
-        title: newCoupon.title,
-        description: newCoupon.description,
-        brand: newCoupon.brand,
-        value: parseFloat(newCoupon.value),
-        category: newCoupon.category,
-        image_url: newCoupon.image_url,
-        expiration: newCoupon.expiration || null,
-        min_purchase: parseFloat(newCoupon.min_purchase),
-        max_uses: parseInt(newCoupon.max_uses),
-        bidding_enabled: newCoupon.bidding_enabled,
-      },
-    ]);
-
-    if (error) {
-      toast({
-        title: "Error creating coupon",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Coupon created successfully",
-      });
-      setCreateDialogOpen(false);
-      setNewCoupon({
-        title: "",
-        description: "",
-        brand: "",
-        value: "",
-        category: "Dairy",
-        image_url: "",
-        expiration: "",
-        min_purchase: "0",
-        max_uses: "0",
-        bidding_enabled: false,
-      });
-      fetchCoupons();
-    }
+    setCoupons([coupon, ...coupons]);
+    toast({
+      title: "✅ Coupon Created!",
+      description: `"${coupon.title}" is now active`,
+    });
+    setCreateDialogOpen(false);
+    setNewCoupon({
+      title: "",
+      description: "",
+      brand: "",
+      value: "",
+      category: "Dairy",
+      image_url: "",
+      expiration: "",
+      min_purchase: "0",
+      max_uses: "0",
+      bidding_enabled: false,
+    });
   };
 
   const handleDeleteCoupon = async (id: string) => {
-    const { error } = await supabase.from("coupons").delete().eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error deleting coupon",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Coupon deleted successfully",
-      });
-      fetchCoupons();
-    }
+    setCoupons(coupons.filter(c => c.id !== id));
+    toast({ title: "Coupon Deleted", description: "Coupon removed successfully" });
   };
 
-  const toggleBidding = async (coupon: Coupon) => {
-    const { error } = await supabase
-      .from("coupons")
-      .update({ bidding_enabled: !coupon.bidding_enabled })
-      .eq("id", coupon.id);
-
-    if (error) {
-      toast({
-        title: "Error updating coupon",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: `Brand bidding ${!coupon.bidding_enabled ? "enabled" : "disabled"}`,
-      });
-      fetchCoupons();
-    }
+  const toggleBidding = (coupon: Coupon) => {
+    setCoupons(coupons.map(c => 
+      c.id === coupon.id ? { ...c, bidding_enabled: !c.bidding_enabled } : c
+    ));
+    toast({
+      title: "Updated",
+      description: `Brand bidding ${!coupon.bidding_enabled ? "enabled" : "disabled"}`,
+    });
   };
 
   const calculateRevenue = (bids: CouponBid[]) => {
@@ -249,101 +194,123 @@ const CouponManager = () => {
     }, 0);
   };
 
-  const importFromHEB = async () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "HEB.com coupon scraper in development",
-    });
-    // TODO: Implement web scraping in future
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading coupons...</p>
-      </div>
-    );
-  }
+  // Calculate total bidding revenue
+  const totalBiddingRevenue = Object.values(couponBids).flat().reduce((total, bid) => {
+    return total + (bid.bid_amount * bid.impressions_delivered);
+  }, 0);
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-gray-50 p-6 tablet-padding">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">Coupon Manager</h1>
-            <p className="text-muted-foreground mt-2">
-              Create coupons and enable brand bidding for placement
+        {/* Header with Back Button */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link to="/grocer-dashboard">
+            <Button variant="ghost" size="icon" className="h-14 w-14">
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          </Link>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <Gift className="w-8 h-8 text-primary" />
+              <h1 className="demo-heading text-gray-900">Coupon Manager</h1>
+            </div>
+            <p className="text-lg text-gray-600 mt-1">
+              Create coupons and enable brand bidding for premium placement
             </p>
           </div>
+        </div>
 
-          <div className="flex gap-3">
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Coupon
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+        {/* Revenue Summary */}
+        <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 mb-8 text-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-green-100 mb-1 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Total Brand Bidding Revenue
+              </p>
+              <p className="text-5xl font-bold">${totalBiddingRevenue.toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-green-100 mb-1">Active Coupons</p>
+              <p className="text-4xl font-bold">{coupons.filter(c => c.bidding_enabled).length}</p>
+              <p className="text-green-200 text-sm">with bidding enabled</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 mb-8">
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-16 px-8 text-xl bg-primary hover:bg-primary/90">
+                <Plus className="w-6 h-6 mr-3" />
+                Create New Coupon
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create New Coupon</DialogTitle>
+                <DialogTitle className="text-2xl">Create New Coupon</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
+              <div className="space-y-5 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Title</Label>
+                    <Label className="text-base">Coupon Title</Label>
                     <Input
                       value={newCoupon.title}
                       onChange={(e) => setNewCoupon({ ...newCoupon, title: e.target.value })}
                       placeholder="$2 off Horizon Milk"
+                      className="h-12 text-lg mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Brand</Label>
+                    <Label className="text-base">Brand</Label>
                     <Input
                       value={newCoupon.brand}
                       onChange={(e) => setNewCoupon({ ...newCoupon, brand: e.target.value })}
                       placeholder="Horizon"
+                      className="h-12 text-lg mt-2"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Description</Label>
+                  <Label className="text-base">Description</Label>
                   <Textarea
                     value={newCoupon.description}
                     onChange={(e) => setNewCoupon({ ...newCoupon, description: e.target.value })}
                     placeholder="Save $2 on any Horizon Organic Milk product"
+                    className="text-lg mt-2"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Value ($)</Label>
+                    <Label className="text-base">Value ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={newCoupon.value}
                       onChange={(e) => setNewCoupon({ ...newCoupon, value: e.target.value })}
                       placeholder="2.00"
+                      className="h-12 text-lg mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Category</Label>
+                    <Label className="text-base">Category</Label>
                     <Select
                       value={newCoupon.category}
                       onValueChange={(value) => setNewCoupon({ ...newCoupon, category: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-lg mt-2">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Dairy">Dairy</SelectItem>
-                        <SelectItem value="Produce">Produce</SelectItem>
-                        <SelectItem value="Meat">Meat</SelectItem>
-                        <SelectItem value="Bakery">Bakery</SelectItem>
-                        <SelectItem value="Pantry">Pantry</SelectItem>
-                        <SelectItem value="Beverages">Beverages</SelectItem>
+                        <SelectItem value="Dairy" className="text-lg py-3">Dairy</SelectItem>
+                        <SelectItem value="Produce" className="text-lg py-3">Produce</SelectItem>
+                        <SelectItem value="Meat" className="text-lg py-3">Meat</SelectItem>
+                        <SelectItem value="Bakery" className="text-lg py-3">Bakery</SelectItem>
+                        <SelectItem value="Pantry" className="text-lg py-3">Pantry</SelectItem>
+                        <SelectItem value="Beverages" className="text-lg py-3">Beverages</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -351,207 +318,207 @@ const CouponManager = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Minimum Purchase ($)</Label>
+                    <Label className="text-base">Min Purchase ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={newCoupon.min_purchase}
                       onChange={(e) => setNewCoupon({ ...newCoupon, min_purchase: e.target.value })}
                       placeholder="0.00"
+                      className="h-12 text-lg mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Max Uses (0 = unlimited)</Label>
+                    <Label className="text-base">Max Uses (0 = unlimited)</Label>
                     <Input
                       type="number"
                       value={newCoupon.max_uses}
                       onChange={(e) => setNewCoupon({ ...newCoupon, max_uses: e.target.value })}
                       placeholder="0"
+                      className="h-12 text-lg mt-2"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Expiration Date</Label>
+                  <Label className="text-base">Expiration Date</Label>
                   <Input
                     type="date"
                     value={newCoupon.expiration}
                     onChange={(e) => setNewCoupon({ ...newCoupon, expiration: e.target.value })}
+                    className="h-12 text-lg mt-2"
                   />
                 </div>
 
-                <div>
-                  <Label>Image URL</Label>
-                  <Input
-                    value={newCoupon.image_url}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, image_url: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border-2 border-green-200">
+                  <div>
+                    <Label className="text-lg font-semibold text-green-800">Enable Brand Bidding</Label>
+                    <p className="text-green-600 text-sm mt-1">
+                      Allow brands to bid for premium coupon placement
+                    </p>
+                  </div>
                   <Switch
                     checked={newCoupon.bidding_enabled}
                     onCheckedChange={(checked) =>
                       setNewCoupon({ ...newCoupon, bidding_enabled: checked })
                     }
+                    className="scale-125"
                   />
-                  <Label>Enable Brand Bidding (Digital Slotting)</Label>
                 </div>
 
-                <Button onClick={handleCreateCoupon} className="w-full">
+                <Button onClick={handleCreateCoupon} className="w-full h-14 text-xl">
                   Create Coupon
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
-          
-          <Button variant="outline" onClick={importFromHEB}>
-            <Download className="w-4 h-4 mr-2" />
-            Import from HEB.com
-          </Button>
         </div>
-      </div>
 
-      {coupons.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Gift className="w-12 h-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No coupons yet. Create your first one!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {coupons.map((coupon) => {
-              const bids = couponBids[coupon.id] || [];
-              const revenue = calculateRevenue(bids);
+        {/* Coupon List */}
+        <div className="space-y-6">
+          {coupons.map((coupon) => {
+            const bids = couponBids[coupon.id] || [];
+            const revenue = calculateRevenue(bids);
+            const redemptionRate = coupon.impressions > 0 
+              ? ((coupon.redemptions / coupon.impressions) * 100).toFixed(1)
+              : "0";
 
-              return (
-                <Card key={coupon.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CardTitle>{coupon.title}</CardTitle>
-                          <Badge variant={coupon.status === "active" ? "default" : "secondary"}>
-                            {coupon.status}
+            return (
+              <Card key={coupon.id} className="border-2 border-gray-100 hover:border-primary/30 transition-colors">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CardTitle className="text-2xl">{coupon.title}</CardTitle>
+                        <Badge variant="default" className="text-base px-3 py-1">
+                          {coupon.status}
+                        </Badge>
+                        {coupon.bidding_enabled && (
+                          <Badge variant="outline" className="border-green-500 text-green-600 text-base px-3 py-1">
+                            💰 Bidding Active
                           </Badge>
-                          {coupon.bidding_enabled && (
-                            <Badge variant="outline" className="border-green-500 text-green-500">
-                              Bidding Enabled
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{coupon.description}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span>Brand: {coupon.brand}</span>
-                          <span>Value: ${coupon.value}</span>
-                          <span>Category: {coupon.category}</span>
-                        </div>
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteCoupon(coupon.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <p className="text-lg text-gray-600">{coupon.description}</p>
+                      <div className="flex items-center gap-6 mt-3 text-base text-gray-500">
+                        <span>Brand: <strong>{coupon.brand}</strong></span>
+                        <span>Value: <strong className="text-green-600">${coupon.value.toFixed(2)}</strong></span>
+                        <span>Category: {coupon.category}</span>
+                      </div>
                     </div>
-                  </CardHeader>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteCoupon(coupon.id)}
+                      className="h-12 w-12"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                    </Button>
+                  </div>
+                </CardHeader>
 
-                  <CardContent>
-                    <div className="grid grid-cols-4 gap-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Impressions</p>
-                          <p className="font-semibold">{coupon.impressions}</p>
-                        </div>
+                <CardContent>
+                  {/* Metrics Row */}
+                  <div className="grid grid-cols-4 gap-6 mb-6">
+                    <div className="flex items-center gap-3">
+                      <Eye className="w-6 h-6 text-blue-500" />
+                      <div>
+                        <p className="text-sm text-gray-500">Impressions</p>
+                        <p className="text-2xl font-bold text-gray-900">{coupon.impressions.toLocaleString()}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Gift className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Redemptions</p>
-                          <p className="font-semibold">{coupon.redemptions}</p>
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Gift className="w-6 h-6 text-purple-500" />
+                      <div>
+                        <p className="text-sm text-gray-500">Redemptions</p>
+                        <p className="text-2xl font-bold text-gray-900">{coupon.redemptions} <span className="text-base font-normal text-gray-500">({redemptionRate}%)</span></p>
                       </div>
-                      {coupon.bidding_enabled && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4 text-green-500" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Revenue from Bids</p>
-                              <p className="font-semibold text-green-600">
-                                ${revenue.toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
+                    </div>
+                    {coupon.bidding_enabled && (
+                      <>
+                        <div className="flex items-center gap-3 money-flow-card rounded-lg bg-green-50 p-3 -m-3">
+                          <DollarSign className="w-6 h-6 text-green-600" />
                           <div>
-                            <p className="text-sm text-muted-foreground">Active Bids</p>
-                            <p className="font-semibold">{bids.length}</p>
+                            <p className="text-sm text-gray-500">Bid Revenue</p>
+                            <p className="text-2xl font-bold text-green-600">${revenue.toFixed(2)}</p>
                           </div>
-                        </>
-                      )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Active Bids</p>
+                          <p className="text-2xl font-bold text-gray-900">{bids.length}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Bidding Toggle & Show Bids */}
+                  <div className="flex items-center gap-6 pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={coupon.bidding_enabled}
+                        onCheckedChange={() => toggleBidding(coupon)}
+                        className="scale-110"
+                      />
+                      <Label className="text-base">Enable Brand Bidding</Label>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={coupon.bidding_enabled}
-                          onCheckedChange={() => toggleBidding(coupon)}
-                        />
-                        <Label>Enable Brand Bidding</Label>
-                      </div>
+                    {coupon.bidding_enabled && bids.length > 0 && (
+                      <Button
+                        variant="outline"
+                        className="h-12 px-5 text-base"
+                        onClick={() =>
+                          setSelectedCoupon(selectedCoupon === coupon.id ? null : coupon.id)
+                        }
+                      >
+                        {selectedCoupon === coupon.id ? "Hide" : "View"} Bids ({bids.length})
+                      </Button>
+                    )}
+                  </div>
 
-                      {coupon.bidding_enabled && bids.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setSelectedCoupon(selectedCoupon === coupon.id ? null : coupon.id)
-                          }
-                        >
-                          {selectedCoupon === coupon.id ? "Hide" : "Show"} Bids ({bids.length})
-                        </Button>
-                      )}
-                    </div>
-
-                    {selectedCoupon === coupon.id && bids.length > 0 && (
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="font-semibold mb-3">Brand Bids</h4>
-                        <div className="space-y-2">
-                          {bids.map((bid) => (
-                            <div
-                              key={bid.id}
-                              className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                            >
+                  {/* Brand Bids Expanded */}
+                  {selectedCoupon === coupon.id && bids.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        Brand Bids — Revenue Flow
+                      </h4>
+                      <div className="space-y-3">
+                        {bids.map((bid, index) => (
+                          <div
+                            key={bid.id}
+                            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold">
+                                #{index + 1}
+                              </div>
                               <div>
-                                <p className="font-medium">
+                                <p className="text-lg font-semibold text-gray-900">
                                   {brandNames[bid.brand_id] || bid.brand_id}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-base text-gray-600">
                                   Bid: ${bid.bid_amount.toFixed(4)} per impression
                                 </p>
                               </div>
-                              <div className="text-right">
-                                <p className="text-sm text-muted-foreground">
-                                  {bid.impressions_delivered} impressions
-                                </p>
-                                <p className="font-semibold text-green-600">
-                                  ${(bid.bid_amount * bid.impressions_delivered).toFixed(2)}
-                                </p>
-                              </div>
                             </div>
-                          ))}
-                        </div>
+                            <div className="text-right money-flow-card rounded-lg bg-green-50 px-4 py-2">
+                              <p className="text-sm text-gray-500">
+                                {bid.impressions_delivered.toLocaleString()} impressions
+                              </p>
+                              <p className="text-xl font-bold text-green-600">
+                                ${(bid.bid_amount * bid.impressions_delivered).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

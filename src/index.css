@@ -146,4 +146,64 @@ All colors MUST be HSL.
       linear-gradient(90deg, hsl(195 100% 50% / 0.03) 1px, transparent 1px);
     background-size: 50px 50px;
   }
+
+  /* ===== DEMO MODE: Tablet + TV Optimizations ===== */
+  
+  /* Large tap targets for tablet demo */
+  .demo-btn {
+    @apply min-h-[56px] min-w-[120px] text-lg font-semibold px-6 py-4 touch-manipulation;
+  }
+
+  /* High contrast text for TV viewing */
+  .demo-heading {
+    @apply text-4xl font-bold tracking-tight;
+  }
+
+  .demo-stat-value {
+    @apply text-5xl font-bold tracking-tight;
+  }
+
+  .demo-stat-label {
+    @apply text-lg font-medium text-foreground/80;
+  }
+
+  /* Money flow highlight */
+  .money-flow-card {
+    @apply relative overflow-hidden;
+  }
+
+  .money-flow-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-green-600;
+  }
+
+  /* Tablet-responsive grids */
+  @media (min-width: 768px) and (max-width: 1366px) {
+    .tablet-grid-2 {
+      @apply grid-cols-2 gap-4;
+    }
+    
+    .tablet-grid-3 {
+      @apply grid-cols-3 gap-3;
+    }
+    
+    .tablet-sidebar {
+      @apply w-56;
+    }
+    
+    .tablet-padding {
+      @apply p-4;
+    }
+  }
+
+  /* TV presentation mode - larger everything */
+  @media (min-width: 1920px) {
+    .tv-mode .demo-stat-value {
+      @apply text-6xl;
+    }
+    
+    .tv-mode .demo-heading {
+      @apply text-5xl;
+    }
+  }
 }
