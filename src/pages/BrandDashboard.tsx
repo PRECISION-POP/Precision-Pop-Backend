@@ -5,6 +5,7 @@ import { BarChart3, Package, PlusCircle, Target, Home, LogOut, DollarSign, ChefH
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import BrandDashboardLayout from "@/components/BrandDashboardLayout";
+import DemoDataBanner from "@/components/DemoDataBanner";
 
 // Demo mock data for investor presentation
 const DEMO_CAMPAIGNS = [
@@ -72,7 +73,16 @@ interface Campaign {
 }
 
 const BrandDashboard = () => {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(DEMO_CAMPAIGNS);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
+    // Merge locally-saved campaign drafts (from Create Campaign) with demo data.
+    // Drafts are real user input; the rest is illustrative demo data.
+    try {
+      const drafts: Campaign[] = JSON.parse(localStorage.getItem("ppop_campaign_drafts") || "[]");
+      return [...drafts, ...DEMO_CAMPAIGNS];
+    } catch {
+      return DEMO_CAMPAIGNS;
+    }
+  });
   const [stats, setStats] = useState(DEMO_STATS);
   const [loading, setLoading] = useState(false);
   const [brandId, setBrandId] = useState<string | null>('dev-brand-001');
@@ -107,6 +117,8 @@ const BrandDashboard = () => {
             </Button>
           </Link>
         </div>
+
+        <DemoDataBanner className="mb-8" />
 
         {/* Money Flow Summary - Clear for Investors */}
         <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-2xl p-6 mb-8 text-white">

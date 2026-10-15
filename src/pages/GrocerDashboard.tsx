@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DemoDataBanner from "@/components/DemoDataBanner";
 
 // Demo mock data for investor presentation
 const DEMO_DATA = {
@@ -73,7 +74,38 @@ const GrocerDashboard = () => {
   }, []);
 
   const exportToCSV = () => {
-    toast({ title: "Export Started", description: "Generating CSV report..." });
+    // Export the on-screen demo figures as a real CSV download.
+    try {
+      const rows: string[][] = [
+        ["metric", "value"],
+        ["store", storeName],
+        ["time_range", timeRange],
+        ["check_ins", String(stats.todayCheckIns)],
+        ["active_promos", String(stats.activePromos)],
+        ["today_revenue", String(stats.todayRevenue)],
+        ["brand_revenue", String(stats.brandRevenue)],
+        [],
+        ["promo_id", "product", "sku", "category", "discount_pct", "stock_remaining", "impressions", "accepts", "redemptions", "revenue_impact", "status"],
+        ...flashPromos.map((p: any) => [
+          p.id, p.product_name, p.sku, p.category, p.discount_value,
+          p.stock_remaining, p.impressions_count, p.accept_count,
+          p.redemption_count, p.revenue_impact, p.status,
+        ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)),
+      ];
+      const csv = rows.map((r) => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `grocer-report-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export complete", description: "CSV report downloaded." });
+    } catch {
+      toast({ title: "Export failed", description: "Could not generate the CSV.", variant: "destructive" });
+    }
   };
 
   return (
@@ -106,6 +138,7 @@ const GrocerDashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 bg-gray-50 p-6 tablet-padding overflow-auto">
+        <DemoDataBanner className="mb-6" />
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

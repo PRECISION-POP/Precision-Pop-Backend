@@ -72,15 +72,37 @@ const CreateCampaign = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Demo: Just show success
-    setTimeout(() => {
+    // Persist the campaign draft on this device so it shows up in the
+    // dashboard list. (Server-side persistence lands with brand auth.)
+    try {
+      const draft = {
+        id: `draft-${Date.now()}`,
+        name: formData.name || "Untitled campaign",
+        status: "draft",
+        impressions_delivered: 0,
+        clicks_delivered: 0,
+        conversions_delivered: 0,
+        budget_spent: 0,
+        budget_total: parseFloat(formData.budget_total) || 0,
+        target_segments: formData.target_segments,
+      };
+      const existing = JSON.parse(localStorage.getItem("ppop_campaign_drafts") || "[]");
+      localStorage.setItem("ppop_campaign_drafts", JSON.stringify([draft, ...existing]));
       toast({
-        title: "✅ Campaign Created!",
-        description: `"${formData.name}" is now in review`,
+        title: "Campaign draft saved",
+        description: `"${draft.name}" is saved on this device and listed below.`,
       });
-      navigate("/brand-dashboard");
+    } catch {
+      toast({
+        title: "Could not save",
+        description: "Browser storage is unavailable; the campaign was not saved.",
+        variant: "destructive",
+      });
       setLoading(false);
-    }, 1000);
+      return;
+    }
+    setLoading(false);
+    navigate("/brand-dashboard");
   };
 
   return (
